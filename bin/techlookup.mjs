@@ -24,7 +24,7 @@ Kullanım:
   techlookup --yardim                      Bu metin
 
 Örnek:
-  npx github:inanc76/techlookup ytb.gov.tr
+  npx github:inanc76/techlookup ornek.com.tr
   npx github:inanc76/techlookup kur
 
 Seçenekler:

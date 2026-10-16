@@ -39,12 +39,12 @@ async function tara(...arg) {
 test('K10 alan adı — TRABİS ve RDAP cevabından sahip, kayıt ve bitiş tarihi çıkar', async () => {
   const { whoisCoz, rdapCoz, kayitliAlan } = await kimlik();
   const t = whoisCoz(fikstur('trabis.txt'));
-  assert.equal(t.sahip, 'Başbakanlık Yurtdışı Türkler ve Akraba Topluluklar Başkanlığı');
-  assert.equal(t.kayit, '2010-10-12');
-  assert.equal(t.bitis, '2027-10-11');
+  assert.equal(t.sahip, 'Örnek Kurum A.Ş.');
+  assert.equal(t.kayit, '2012-03-05');
+  assert.equal(t.bitis, '2027-03-04');
   assert.equal(t.kayitFirmasi, 'TRABİS KK');
 
-  const gizli = whoisCoz(fikstur('trabis.txt').replace(/Başbakanlık[^\n]*/, 'Hidden upon user request'));
+  const gizli = whoisCoz(fikstur('trabis.txt').replace(/Örnek Kurum[^\n]*/, 'Hidden upon user request'));
   assert.equal(gizli.sahip, null, 'gizlenmiş sahip "Hidden upon user request" diye basılmamalı');
   assert.equal(gizli.sahipGizli, true);
 
@@ -62,7 +62,7 @@ test('K10 alan adı — TRABİS ve RDAP cevabından sahip, kayıt ve bitiş tari
   kapali.entities.at(-1).vcardArray[1] = [['fn', {}, 'text', '']];
   assert.equal(rdapCoz(kapali).sahipGizli, true, 'boş sahip adı gizli sayılmadı');
 
-  assert.equal(kayitliAlan('www.ytb.gov.tr'), 'ytb.gov.tr');
+  assert.equal(kayitliAlan('www.ornek.gov.tr'), 'ornek.gov.tr');
   assert.equal(kayitliAlan('shop.ornek.com'), 'ornek.com');
   assert.equal(kayitliAlan('www.bbc.co.uk'), 'bbc.co.uk');
 });
@@ -199,7 +199,7 @@ test('K16 önceki ajans — önceki şablonun son arşiv kaydındaki imza okunur
 
 test('K17 önceki ajans satırı — bulundu · imza yok · önceki şablon yok · ölçülemedi ayrı yazılır', async () => {
   const { kimlikSatirlari } = await import(join(kok, 'scripts', 'techlookup.mjs'));
-  const alanAdi = { durum: 'tamam', alan: 'x.gov.tr', kaynak: 'TRABİS kaydı', kayit: '2010-10-12', bitis: '2027-10-11', kayitFirmasi: 'T', sahip: 'S' };
+  const alanAdi = { durum: 'tamam', alan: 'x.gov.tr', kaynak: 'TRABİS kaydı', kayit: '2012-03-05', bitis: '2027-03-04', kayitFirmasi: 'T', sahip: 'S' };
   const sablon = { durum: 'tamam', sonFarkli: '20221201000000', ilkAyni: '20230101000000', incelenen: 8 };
   const satir = (t) => kimlikSatirlari({ alanAdi, ajans: null, sablon: t }).find((x) => x[1] === 'Önceki siteyi yapan ajans');
   const var_ = satir({ ...sablon, oncekiAjans: { ad: 'Eski Ajans', alan: 'eskiajans.com.tr', kanit: 'alt bilgi' } });

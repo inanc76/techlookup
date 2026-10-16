@@ -6,7 +6,7 @@ bu tasarım ne zamandan beri yayında; neyle kurulmuş, nerede barınıyor, paza
 Terminalde tek başına çalışır, ya da [Claude Code](https://claude.com/claude-code) içinde `/techlookup` komutu olur.
 
 ```bash
-npx github:inanc76/techlookup ytb.gov.tr
+npx github:inanc76/techlookup ornek.com.tr
 ```
 
 > 🇬🇧 English summary at the [bottom](#english-summary).
@@ -19,10 +19,10 @@ Node.js 22 ya da üstü yeterli; başka bağımlılık yok.
 
 | Ne istiyorsun | Komut |
 |---|---|
-| Kurmadan bir kez tara | `npx github:inanc76/techlookup ytb.gov.tr` |
+| Kurmadan bir kez tara | `npx github:inanc76/techlookup ornek.com.tr` |
 | Claude Code'a `/techlookup` komutunu kur | `npx github:inanc76/techlookup kur` |
 | pnpm ile | `pnpm dlx github:inanc76/techlookup kur` |
-| Kalıcı komut olarak kur | `npm i -g github:inanc76/techlookup` → sonra `techlookup ytb.gov.tr` |
+| Kalıcı komut olarak kur | `npm i -g github:inanc76/techlookup` → sonra `techlookup ornek.com.tr` |
 | Yalnız bu projeye kur | `npx github:inanc76/techlookup kur --proje` |
 | Kaldır | `npx github:inanc76/techlookup kaldir` |
 
@@ -50,15 +50,15 @@ Claude tabloyu olduğu gibi gösterir ve altına en fazla 3 satır sade Türkçe
 
 ## Ne çıkar
 
-Örnek: `techlookup ytb.gov.tr` (kısaltılmış)
+Örnek çıktı (temsilî site, kısaltılmış):
 
 ```
 ### 🪪 Site kimliği
-| ✅ | Alan adı sahibi           | Başbakanlık Yurtdışı Türkler ve Akraba Topluluklar Başkanlığı | TRABİS kaydı |
-| ✅ | Kayıt tarihi              | 12.10.2010 · 16 yıl                                            |              |
-| ➖ | Siteyi yapan ajans        | imza bulunamadı                                                |              |
-| ➖ | Önceki siteyi yapan ajans | imza bulunamadı                    | archive.org · Aralık 2022 kaydı |
-| ✅ | Bu şablonla yayında       | başlangıç: Ocak 2023 (3 yıl 9 ay) · önceki şablon en son Aralık 2022'de görüldü |
+| ✅ | Alan adı sahibi           | Örnek Kurum A.Ş.                   | TRABİS kaydı |
+| ✅ | Kayıt tarihi              | 05.03.2012 · 14 yıl                |              |
+| ➖ | Siteyi yapan ajans        | imza bulunamadı                    |              |
+| ➖ | Önceki siteyi yapan ajans | imza bulunamadı                    | archive.org · Şubat 2023 kaydı |
+| ✅ | Bu şablonla yayında       | başlangıç: Mart 2023 (3 yıl 7 ay) · önceki şablon en son Şubat 2023'te görüldü |
 
 ### 🧩 Teknolojiler
 |    | Grup        | Teknoloji | Sürüm (yıl)  | Güncel sürüm |
@@ -70,7 +70,7 @@ Claude tabloyu olduğu gibi gösterir ve altına en fazla 3 satır sade Türkçe
 | ✅ | ✉️ E-posta altyapısı | Microsoft 365 |  |              |
 
 ### 🔒 SSL ve güvenlik başlıkları
-| ✅ | Sertifika | GlobalSign nv-sa · bitiş 21.03.2027 · TLSv1.3 · zincir geçerli |
+| ✅ | Sertifika | Let's Encrypt · bitiş 14.01.2027 · TLSv1.3 · zincir geçerli |
 | ❌ | CSP       | yok |
 ```
 

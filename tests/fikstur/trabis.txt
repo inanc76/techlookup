@@ -1,10 +1,10 @@
-** Domain Name: ytb.gov.tr
+** Domain Name: ornek.com.tr
 Domain Status: Active
 Frozen Status: -
 Transfer Status: The domain is LOCKED to transfer.
 
 ** Registrant:
-Başbakanlık Yurtdışı Türkler ve Akraba Topluluklar Başkanlığı
+Örnek Kurum A.Ş.
 Hidden upon user request
 Hidden upon user request
 Hidden upon user request
@@ -22,18 +22,16 @@ Fax			: 90-312-2100060
 
 
 ** Domain Servers:
-ns1-06.azure-dns.com
-ns2-06.azure-dns.net
-ns3-06.azure-dns.org
-ns4-06.azure-dns.info
+ns1.ornek-dns.com
+ns2.ornek-dns.com
 
 
 ** Additional Info:
-Created on..............: 2010-Oct-12.
-Expires on..............: 2027-Oct-11.
+Created on..............: 2012-Mar-05.
+Expires on..............: 2027-Mar-04.
 
 
 ** Whois Server:
-Last Update Time: 2026-10-16T17:46:36+03:00
+Last Update Time: 2026-01-01T00:00:00+03:00
 
 
