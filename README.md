@@ -15,7 +15,7 @@ npx github:inanc76/techlookup ytb.gov.tr
 
 ## Kurulum
 
-Node.js 20 ya da üstü yeterli; başka bağımlılık yok.
+Node.js 22 ya da üstü yeterli; başka bağımlılık yok.
 
 | Ne istiyorsun | Komut |
 |---|---|
@@ -118,7 +118,7 @@ bot doğrulama sayfaları ayıklanır. Arşivde boşluk varsa tarih aralık olar
 
 ## Gereksinimler ve sınırlar
 
-- **Node.js ≥ 20** zorunlu. `dig`, `whois` ve Chrome/Chromium isteğe bağlı: yoksa ilgili satırlar
+- **Node.js ≥ 22** zorunlu (tarayıcı katmanı Node'un yerleşik WebSocket'ini kullanır). `dig`, `whois` ve Chrome/Chromium isteğe bağlı: yoksa ilgili satırlar
   ⚠️ ölçülemedi olur. macOS ve Linux'ta hazır gelir; Windows'ta DNS ve alan adı satırları çoğunlukla
   ölçülemez. Chrome başka bir yerdeyse: `TECHLOOKUP_CHROME=/yol/chrome`.
 - Sunucu tarafı yazılımlar çoğu sitede gizlidir; görünmüyorsa "bulunamadı" doğrudur.
@@ -162,4 +162,4 @@ npx github:inanc76/techlookup example.com        # scan in the terminal
 npx github:inanc76/techlookup kur                # install the /techlookup skill for Claude Code
 ```
 
-Requires Node.js ≥ 20; `dig`, `whois` and Chrome are optional. MIT licensed.
+Requires Node.js ≥ 22; `dig`, `whois` and Chrome are optional. MIT licensed.
