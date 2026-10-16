@@ -3,6 +3,7 @@
 // Kullanım: node techlookup.mjs <adres> [--statik] [--json]
 //   --statik  tarayıcı katmanını atla (yalnız ham kod + DNS + SSL)
 //   --json    makine okunur çıktı (testler kullanır)
+//   --skill   sona Claude'a kopyalama hatırlatması ekler (SKILL.md kullanır; terminalde gereksiz)
 // Çıkış: 0 sonuç var · 2 site hiç ölçülemedi
 import { readFileSync, writeFileSync, existsSync, statSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
@@ -366,5 +367,10 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     const { grupSirasi, olculemeyenGruplar, ...cikti } = r;
     process.stdout.write(JSON.stringify(cikti));
   } else process.stdout.write(r.markdown + '\n');
+  // Model komut çıktısını kullanıcının gördüğünü sanıp yalnız yorum yazabiliyordu (4 koşuda 1);
+  // talimat SKILL.md'nin başında değil, cevabı yazmadan hemen önce okuduğu yerde durmalı.
+  if (arg.includes('--skill') && !arg.includes('--json')) {
+    process.stdout.write('\n<!-- Claude: kullanıcı bu komut çıktısını GÖRMEZ. Yukarıdaki çıktının TAMAMINI cevabına AYNEN kopyala, sonra en fazla 3 satır yorum yaz. -->\n');
+  }
   process.exit(r.cikis);
 }

@@ -118,3 +118,12 @@ test('K9 gruplama — e-posta servisleri CRM değil E-posta altyapısı grubuna 
   assert.deepEqual((gruplar['E-posta altyapısı'] ?? []).map((x) => x.ad), ['Amazon SES', 'Google Workspace']);
   assert.equal(gruplar['Canlı destek / CRM'], undefined);
 });
+
+test('K20 skill hatırlatması — --skill çıktının sonuna kopyalama talimatı ekler, terminal çıktısı temiz kalır', async () => {
+  const skill = (await koş('node', [betik, `${taban}/`, '--statik', '--skill'], { timeout: 90_000 })).stdout.trimEnd();
+  const son = skill.split('\n').at(-1);
+  assert.match(son, /AYNEN/, 'son satır kopyalama talimatı değil');
+  assert.match(skill, /^## 🔎 Teknoloji taraması/, 'tablo başlığı ilk satırda değil');
+  const duz = (await koş('node', [betik, `${taban}/`, '--statik'], { timeout: 90_000 })).stdout;
+  assert.doesNotMatch(duz, /AYNEN/, 'terminal çıktısına talimat sızdı');
+});

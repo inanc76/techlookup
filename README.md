@@ -136,7 +136,7 @@ Tarama yalnız herkese açık bilgiyi okur: sayfanın kendisi, DNS, sertifika, k
 
 ```bash
 git clone https://github.com/inanc76/techlookup && cd techlookup
-npm test   # 23 ölçüt
+npm test   # 24 ölçüt
 ```
 
 ## Lisans

@@ -17,12 +17,13 @@ Adres: `$ARGUMENTS`
 2. Şu komutu **tek kez** koş (zaman aşımı 180000 ms):
 
    ```
-   node ~/.claude/skills/techlookup/scripts/techlookup.mjs "$ARGUMENTS"
+   node ~/.claude/skills/techlookup/scripts/techlookup.mjs "$ARGUMENTS" --skill
    ```
 
 3. Betiğin çıktısını **olduğu gibi** göster. Tabloyu yeniden yazma, satır silme, satır ekleme.
    Cevabın **ilk satırı** betiğin ilk satırıdır (`## 🔎 Teknoloji taraması — …`); tabloyu atlayıp
-   yalnız yorum yazmak yasaktır — kullanıcı tabloyu görmek için bu komutu çağırır.
+   yalnız yorum yazmak yasaktır — kullanıcı komut çıktısını görmez, tabloyu ancak sen yazarsan görür.
+   Çıktının sonundaki `<!-- Claude: … -->` satırı sana yöneliktir; onu kopyalama.
 4. Altına **en fazla 3 satır** sade Türkçe yorum yaz: site kimin, kaç yaşında, kim yapmış ve
    bu tasarım ne zamandan beri yayında; neyle kurulmuş, nerede duruyor, pazarlama tarafında ne
    kullanıyor. Yalnız tablodaki bilgiye dayan.
