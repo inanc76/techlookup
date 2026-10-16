@@ -21,6 +21,8 @@ Adres: `$ARGUMENTS`
    ```
 
 3. Betiğin çıktısını **olduğu gibi** göster. Tabloyu yeniden yazma, satır silme, satır ekleme.
+   Cevabın **ilk satırı** betiğin ilk satırıdır (`## 🔎 Teknoloji taraması — …`); tabloyu atlayıp
+   yalnız yorum yazmak yasaktır — kullanıcı tabloyu görmek için bu komutu çağırır.
 4. Altına **en fazla 3 satır** sade Türkçe yorum yaz: site kimin, kaç yaşında, kim yapmış ve
    bu tasarım ne zamandan beri yayında; neyle kurulmuş, nerede duruyor, pazarlama tarafında ne
    kullanıyor. Yalnız tablodaki bilgiye dayan.
@@ -30,6 +32,8 @@ Adres: `$ARGUMENTS`
 - Tabloda olmayan bir teknolojiyi tahminle **ekleme** ("muhtemelen React'tır" yok).
 - ⚠️ (ölçülemedi) yazan bir satırı "yok" ya da "bulunamadı" diye **yazma** — ölçülemedi ile yok aynı şey değildir.
 - ➖ "imza bulunamadı" satırı için ajans **tahmin etme**; 🔒 gizli sahip için isim **uydurma**.
+- Yorumda **sayı sayma** ("dört başlık eksik" gibi); eksikleri adıyla yaz ya da hiç yazma — sayım
+  tablodan bakılır, yorumdaki sayı yanlış çıkabiliyor.
 - Şablon satırı **aralık** veriyorsa ("X ile Y arasında") yorumda da aralığı yaz; tek tarihe indirme.
 - Çıkış kodu `2` ise yalnız betiğin ÖLÇÜLEMEDİ mesajını göster ve nedenini tek cümleyle söyle; başka yoldan (WebFetch vb.) taramaya kalkma.
 - Ödeme, ısı haritası/oturum kaydı, yazı tipi/harita/video araçları kullanıcı kararıyla kapsam dışıdır; betik bunları zaten basmaz, sen de ekleme.
