@@ -1,0 +1,20 @@
+[
+ {
+  "cycle": "8.5",
+  "releaseDate": "2025-11-20",
+  "eol": "2029-12-31",
+  "latest": "8.5.11",
+  "latestReleaseDate": "2026-09-24",
+  "lts": false,
+  "support": "2027-12-31"
+ },
+ {
+  "cycle": "5.6",
+  "releaseDate": "2014-08-28",
+  "eol": "2018-12-31",
+  "latest": "5.6.40",
+  "latestReleaseDate": "2019-01-10",
+  "lts": false,
+  "support": "2017-01-19"
+ }
+]

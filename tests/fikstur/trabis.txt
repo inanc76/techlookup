@@ -1,0 +1,39 @@
+** Domain Name: ytb.gov.tr
+Domain Status: Active
+Frozen Status: -
+Transfer Status: The domain is LOCKED to transfer.
+
+** Registrant:
+Başbakanlık Yurtdışı Türkler ve Akraba Topluluklar Başkanlığı
+Hidden upon user request
+Hidden upon user request
+Hidden upon user request
+Hidden upon user request
+
+
+** Registrar:
+NIC Handle		: tk1036
+Organization Name	: TRABİS KK
+Address			: ANKARA
+			  ANKARA
+			  00000 Ankara Türkiye
+Phone			: 90-312-2100060
+Fax			: 90-312-2100060 
+
+
+** Domain Servers:
+ns1-06.azure-dns.com
+ns2-06.azure-dns.net
+ns3-06.azure-dns.org
+ns4-06.azure-dns.info
+
+
+** Additional Info:
+Created on..............: 2010-Oct-12.
+Expires on..............: 2027-Oct-11.
+
+
+** Whois Server:
+Last Update Time: 2026-10-16T17:46:36+03:00
+
+

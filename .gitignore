@@ -1,0 +1,5 @@
+veri/
+gecici/
+node_modules/
+*.yedek-*
+.DS_Store
