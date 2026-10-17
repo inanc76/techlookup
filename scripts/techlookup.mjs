@@ -11,7 +11,8 @@ import { fileURLToPath } from 'node:url';
 import tls from 'node:tls';
 import { veritabaniDerle, eslestir, tarayiciIstekleri } from './eslesme.mjs';
 import { grupla, GRUPLAR } from './kategoriler.mjs';
-import { dnsTopla, dnsYorumla } from './dns.mjs';
+import { dnsTopla, dnsYorumla, kokAlan, dnsGuvenlik, sunucuBilgisi } from './dns.mjs';
+import { satir, SURUM } from './ortak.mjs';
 import { tarayiciTara } from './tarayici.mjs';
 import { alanAdiSorgula, ajansBul, sablonTarihi } from './kimlik.mjs';
 import { surumleriEkle } from './surum.mjs';
@@ -273,6 +274,8 @@ export async function calistir(girdi, { statik: yalnizStatik = false } = {}) {
   const db = veritabaniDerle(teknolojiler);
 
   const yerel = /^(localhost|127\.|\d+\.\d+\.\d+\.\d+$)/.test(host);
+  const yerelSatir = () => satir('olcmedi', 'ölçülemedi — yerel adres, DNS ve dış kaynak sorulmadı');
+  const dnsGuvenlikSozu = yerel ? Promise.resolve(null) : dnsGuvenlik(kokAlan(host), host);
   const alanAdiSozu = yerel ? Promise.resolve({ durum: 'ölçülemedi (yerel adres, alan adı kaydı yok)' }) : alanAdiSorgula(host);
   const [st, dnsHam, ssl] = await Promise.all([
     statikTara(adres),
@@ -280,6 +283,7 @@ export async function calistir(girdi, { statik: yalnizStatik = false } = {}) {
     adres.startsWith('https:') && !yerel ? sslTara(host) : Promise.resolve(undefined),
   ]);
   if (st.cozulemedi) return olculemedi(host, 'alan adı çözülemedi (DNS kaydı yok)');
+  const sunucuSozu = yerel ? Promise.resolve(null) : sunucuBilgisi(host, dnsHam?.a?.[0]);
 
   // arşiv karşılaştırması tarayıcıyla aynı anda koşar; canlı iz ham sayfa kodundan çıkar (arşiv de ham kodu verir)
   const sablonSozu = yerel ? Promise.resolve({ durum: 'ölçülemedi (yerel adres, arşivde yok)' })
@@ -329,16 +333,22 @@ export async function calistir(girdi, { statik: yalnizStatik = false } = {}) {
   if (!dnsHam) for (const g of ['E-posta altyapısı', 'Doğrulama kayıtları']) olculemeyenGruplar[g] = yerel ? 'yerel adres, DNS sorgusu yapılmadı' : 'DNS sorgusu cevap vermedi';
   if (!tarayiciVeri) for (const g of TARAYICI_GRUPLARI) olculemeyenGruplar[g] = `tarayıcı katmanı ${tr.durum === 'atlandı' ? 'atlandı' : 'çalışmadı'}, sonradan yüklenen araçlar görünmez`;
 
-  const [alanAdi, sablon] = await Promise.all([alanAdiSozu, sablonSozu, surumleriEkle(gruplar)]);
+  const [alanAdi, sablon, , dnsG, sunucu] = await Promise.all([alanAdiSozu, sablonSozu, surumleriEkle(gruplar), dnsGuvenlikSozu, sunucuSozu]);
+  const dnsSunucu = {
+    dnssec: dnsG?.dnssec ?? yerelSatir(), caa: dnsG?.caa ?? yerelSatir(), soa: dnsG?.soa ?? yerelSatir(), https: dnsG?.https ?? yerelSatir(),
+    ulke: sunucu?.ulke ?? yerelSatir(), yesil: sunucu?.yesil ?? yerelSatir(),
+  };
   const kimlik = { alanAdi, ajans: ajansBul(sinyal.html, host), sablon };
 
   const r = {
-    adres, host, sonAdres: sinyal.url, notlar, gruplar, dislanan, grupSirasi, olculemeyenGruplar, kimlik,
+    surum: SURUM, adres, host, sonAdres: sinyal.url, notlar, gruplar, dislanan, grupSirasi, olculemeyenGruplar, kimlik, dnsSunucu,
     durum: {
       statik: st.durum,
       tarayici: tr.durum,
       dns: yerel ? 'atlandı' : dnsHam ? 'tamam' : 'ölçülemedi',
       ssl: ssl === undefined ? 'atlandı' : ssl ? 'tamam' : 'ölçülemedi',
+      ulke: yerel ? 'atlandı' : dnsSunucu.ulke.durum === 'olcmedi' ? 'ölçülemedi' : 'tamam',
+      yesilEnerji: yerel ? 'atlandı' : dnsSunucu.yesil.durum === 'olcmedi' ? 'ölçülemedi' : 'tamam',
     },
     ssl: ssl ?? null,
     guvenlik,
