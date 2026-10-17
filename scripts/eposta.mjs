@@ -1,7 +1,7 @@
 // E-posta güvenliği: SPF ağacı (10 sorgu sınırına karşı sayım) · DMARC · DKIM (yaygın adlar) · MTA-STS · TLS-RPT · BIMI.
 // Yalnız olgu yazılır; rapor/iletişim e-posta adresleri hiçbir çıktıya girmez.
 import { digSor, guvenliAd, txtBirlestir, yedekNotu } from './dns.mjs';
-import { satir, sinirliGetir, guvenliMetin } from './ortak.mjs';
+import { satir, sinirliGetir, guvenliMetin, sureSiniri, sureMetni } from './ortak.mjs';
 
 // DKIM anahtar adı dışarıdan listelenemez: yaygın sağlayıcı adları tek tek denenir
 export const DKIM_ADLARI = [
@@ -102,7 +102,12 @@ async function mtaStsSatiri(kok, sor, getir) {
 }
 
 /** Kökteki e-posta kayıtları. secenek: { calistir, yedek } dig için, { getir } MTA-STS politikası için. */
-export async function epostaGuvenligi(kok, { calistir, yedek, getir = sinirliGetir } = {}) {
+export function epostaGuvenligi(kok, { calistir, yedek, getir = sinirliGetir, sure = 40_000 } = {}) {
+  return sureSiniri(epostaGuvenligiIc(kok, { calistir, yedek, getir }), sure,
+    () => Object.fromEntries(['spf', 'dmarc', 'dkim', 'mtaSts', 'tlsRpt', 'bimi'].map((k) => [k, satir('olcmedi', sureMetni(sure))])));
+}
+
+async function epostaGuvenligiIc(kok, { calistir, yedek, getir }) {
   const sor = (tur, ad) => digSor(tur, ad, { calistir, yedek });
   const [spf, dmarc, dkim, mtaSts, tlsRpt, bimi] = await Promise.all([
     spfSatiri(kok, sor),

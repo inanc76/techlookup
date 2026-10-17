@@ -1,6 +1,6 @@
 // Sitenin kökündeki standart dosyalar: robots.txt · sitemap.xml · security.txt · llms.txt · ads.txt · humans.txt.
 // Gövdeler VERİDİR ve basılmaz: yalnız yapısal olgu (var/yok, sayı, tarih, alan var mı) yazılır.
-import { satir, sinirliGetir, UA_TARAYICI } from './ortak.mjs';
+import { satir, sinirliGetir, UA_TARAYICI, sureSiniri, sureMetni } from './ortak.mjs';
 import { kayitliAlan, humansAjans } from './kimlik.mjs';
 
 const METIN_TAVANI = 256 * 1024;
@@ -85,7 +85,12 @@ function adsOlgusu(govde) {
 }
 
 /** origin: taranan sitenin kökü (https://www.ornek.com). getir: test için değiştirilebilir. */
-export async function siteDosyalari(origin, { getir = sinirliGetir } = {}) {
+export function siteDosyalari(origin, { getir = sinirliGetir, sure = 30_000 } = {}) {
+  return sureSiniri(siteDosyalariIc(origin, getir), sure,
+    () => Object.fromEntries(['robots', 'sitemap', 'securityTxt', 'llms', 'ads', 'humans'].map((k) => [k, satir('olcmedi', sureMetni(sure))])));
+}
+
+async function siteDosyalariIc(origin, getir) {
   const site = kayitliAlan(new URL(origin).hostname);
   const al = (yol, bayt = METIN_TAVANI) => ayniSiteGetir(new URL(yol, origin).href, site, getir, bayt);
   const bosDegil = (g) => g.trim().length > 0;

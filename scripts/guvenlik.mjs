@@ -1,5 +1,5 @@
 // SSL ve güvenlik eki: sertifika kapsamı · yönlendirme zinciri · HSTS önyükleme koşulları · çerez bayrakları.
-import { satir, sinirliGetir, guvenliMetin, UA_TARAYICI } from './ortak.mjs';
+import { satir, sinirliGetir, guvenliMetin, UA_TARAYICI, sureSiniri, sureMetni } from './ortak.mjs';
 import { kayitliAlan } from './kimlik.mjs';
 
 /** Sertifikanın kapsadığı adlar ve bitişe kalan gün (tls getPeerCertificate nesnesinden). */
@@ -50,7 +50,11 @@ export function cerezSatiri(liste, kaynak) {
 const adresKirp = (u) => { const x = new URL(u); return `${x.protocol}//${x.host}${x.pathname.split(';')[0]}`; };
 
 /** http:// adresinden başlayan yönlendirme zinciri; başka alana geçince o adım yazılır, sonrası izlenmez. */
-export async function yonlendirmeZinciri(baslangic, { getir = sinirliGetir } = {}) {
+export function yonlendirmeZinciri(baslangic, { getir = sinirliGetir, sure = 40_000 } = {}) {
+  return sureSiniri(yonlendirmeZinciriIc(baslangic, getir), sure, () => satir('olcmedi', sureMetni(sure), baslangic, { adimlar: [] }));
+}
+
+async function yonlendirmeZinciriIc(baslangic, getir) {
   const site = kayitliAlan(new URL(baslangic).hostname);
   const adimlar = [];
   const gorulen = new Set();

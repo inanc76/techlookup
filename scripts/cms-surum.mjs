@@ -1,6 +1,6 @@
 // CMS bulundu ama sürümü yoksa: CMS'in kendi bilinen dosyasından tam sürüm.
 // Yalnız o CMS zaten bulunduysa, her yol bir kez, yalnız aynı siteye. Dosya gövdesi basılmaz; yalnız sürüm.
-import { sinirliGetir } from './ortak.mjs';
+import { sinirliGetir, sureSiniri } from './ortak.mjs';
 import { kayitliAlan } from './kimlik.mjs';
 import { ayniSiteGetir } from './dosyalar.mjs';
 
@@ -18,7 +18,13 @@ const YOKLAMALAR = {
 
 const kanitEkle = (t, k) => { (t.kanit ??= []).push(k); };
 
-export async function cmsSurumu(gruplar, origin, html, { getir = sinirliGetir } = {}) {
+export function cmsSurumu(gruplar, origin, html, { getir = sinirliGetir, sure = 20_000 } = {}) {
+  // süre dolduktan sonra gelen cevap sürümü değiştirmez (yıl/güncel sürüm o an hesaplanmaya başlamıştır)
+  const is = { bitti: false };
+  return sureSiniri(cmsSurumuIc(gruplar, origin, html, getir, is), sure, () => { is.bitti = true; });
+}
+
+async function cmsSurumuIc(gruplar, origin, html, getir, is) {
   const adaylar = (gruplar?.CMS ?? []).filter((t) => !t.surum && YOKLAMALAR[t.ad]);
   if (!adaylar.length) return;
   const site = kayitliAlan(new URL(origin).hostname);
@@ -32,6 +38,6 @@ export async function cmsSurumu(gruplar, origin, html, { getir = sinirliGetir } 
     try { r = await ayniSiteGetir(new URL(y.yol, origin).href, site, getir, TAVAN); } catch { return; }
     if (r?.kod !== 200 || typeof r.govde !== 'string') return;
     const s = r.govde.match(y.desen)?.[1];
-    if (s && SURUM.test(s)) { t.surum = s; kanitEkle(t, y.kanit); }
+    if (s && SURUM.test(s) && !is.bitti) { t.surum = s; kanitEkle(t, y.kanit); }
   }));
 }

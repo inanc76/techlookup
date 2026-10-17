@@ -73,3 +73,23 @@ export function jsonCoz(r) {
   if (r.durum !== 'tamam') return { hata: r.durum.replace(/^ölçülemedi \((.*)\)$/, '$1') };
   try { return { veri: JSON.parse(r.govde) }; } catch { return { hata: 'cevap çözülemedi' }; }
 }
+
+/**
+ * Toplayıcının toplam süre sınırı: `soz` `ms` içinde dönmezse `yedek()` döner.
+ * Her alt istek kendi sınırını taşır, ama zincirleme istekler (SPF ağacı, yönlendirme) toplamda uzayabilir.
+ */
+export function sureSiniri(soz, ms, yedek) {
+  let zaman;
+  const sinir = new Promise((coz) => { zaman = setTimeout(() => coz(yedek()), ms); zaman.unref?.(); });
+  return Promise.race([soz, sinir]).finally(() => clearTimeout(zaman));
+}
+
+export const sureMetni = (ms) => `ölçülemedi — süre sınırı (${Math.round(ms / 100) / 10} sn) aşıldı`;
+
+/** --json çıktısı: siteden gelen metin içindeki HTML yorum işaretleri etkisizleşir (yorum kanalı yalnız betiğindir). */
+export function yorumSuz(x) {
+  if (typeof x === 'string') return x.replace(/<!--|-->/g, ' ');
+  if (Array.isArray(x)) return x.map(yorumSuz);
+  if (x && typeof x === 'object') return Object.fromEntries(Object.entries(x).map(([k, v]) => [k, yorumSuz(v)]));
+  return x;
+}

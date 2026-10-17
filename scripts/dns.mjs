@@ -1,7 +1,7 @@
 // DNS kayıtlarından e-posta altyapısı, doğrulama kayıtları ve DNS/barındırma sağlayıcısı çıkarır.
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { satir, sinirliGetir, jsonCoz } from './ortak.mjs';
+import { satir, sinirliGetir, jsonCoz, sureSiniri, sureMetni } from './ortak.mjs';
 
 const koş = promisify(execFile);
 
@@ -309,7 +309,12 @@ function httpsSatiri(c) {
 }
 
 /** DNSSEC (kökte DS) · CAA · SOA · HTTPS kaydı. */
-export async function dnsGuvenlik(kok, host, secenek = {}) {
+export function dnsGuvenlik(kok, host, secenek = {}) {
+  const { sure = 25_000 } = secenek;
+  return sureSiniri(dnsGuvenlikIc(kok, host, secenek), sure, () => Object.fromEntries(['dnssec', 'caa', 'soa', 'https'].map((k) => [k, satir('olcmedi', sureMetni(sure))])));
+}
+
+async function dnsGuvenlikIc(kok, host, secenek) {
   const sor = (tur, ad) => digSor(tur, ad, secenek);
   const [ds, caa, soa, https] = await Promise.all([sor('DS', kok), sor('CAA', kok), sor('SOA', kok), sor('TYPE65', host)]);
   return {
@@ -324,7 +329,11 @@ export async function dnsGuvenlik(kok, host, secenek = {}) {
 const ulkeAdi = (kod) => { try { return new Intl.DisplayNames(['tr'], { type: 'region' }).of(kod); } catch { return kod; } };
 
 /** RIPEstat (MaxMind GeoLite) ile IP'nin ülkesi; Green Web Foundation ile yeşil enerji kaydı. */
-export async function sunucuBilgisi(host, ip, { getir = sinirliGetir } = {}) {
+export function sunucuBilgisi(host, ip, { getir = sinirliGetir, sure = 20_000 } = {}) {
+  return sureSiniri(sunucuBilgisiIc(host, ip, getir), sure, () => ({ ulke: satir('olcmedi', sureMetni(sure)), yesil: satir('olcmedi', sureMetni(sure)) }));
+}
+
+async function sunucuBilgisiIc(host, ip, getir) {
   const ipGecerli = /^\d{1,3}(\.\d{1,3}){3}$/.test(ip ?? '');
   const [ripe, yesil] = await Promise.all([
     ipGecerli ? getir(`https://stat.ripe.net/data/maxmind-geo-lite/data.json?resource=${ip}&sourceapp=techlookup`, { bayt: 64 * 1024 }) : null,

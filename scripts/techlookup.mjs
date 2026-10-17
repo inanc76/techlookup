@@ -12,7 +12,7 @@ import tls from 'node:tls';
 import { veritabaniDerle, eslestir, tarayiciIstekleri, adresTeknolojileri } from './eslesme.mjs';
 import { grupla, GRUPLAR } from './kategoriler.mjs';
 import { dnsTopla, dnsYorumla, kokAlan, dnsGuvenlik, sunucuBilgisi } from './dns.mjs';
-import { satir, SURUM, guvenliMetin } from './ortak.mjs';
+import { satir, SURUM, guvenliMetin, yorumSuz } from './ortak.mjs';
 import { cmsSurumu } from './cms-surum.mjs';
 import { wordpressIzleri, disAlanAdlari, paylasimEtiketleri } from './sayfa.mjs';
 import { epostaGuvenligi } from './eposta.mjs';
@@ -64,10 +64,12 @@ function htmlAyikla(html) {
     if (src) scriptSrc.push(src[1]);
     else if (m[2].trim()) scripts.push(m[2].slice(0, 20000));
   }
-  for (const m of html.matchAll(/<meta\b[^>]*>/gi)) {
-    const ad = m[0].match(/\b(?:name|property|http-equiv)\s*=\s*["']([^"']+)["']/i);
-    const icerik = m[0].match(/\bcontent\s*=\s*["']([^"']*)["']/i);
-    if (ad && !(ad[1].toLowerCase() in meta)) meta[ad[1].toLowerCase()] = icerik ? icerik[1] : '';
+  // nitelik değeri tırnak içinde '>' ve öteki tırnağı taşıyabilir: etiket ve değer tırnağa duyarlı okunur
+  for (const m of html.matchAll(/<meta\b(?:[^>"']|"[^"]*"|'[^']*')*>/gi)) {
+    const ad = m[0].match(/\b(?:name|property|http-equiv)\s*=\s*(?:"([^"]+)"|'([^']+)')/i);
+    const icerik = m[0].match(/\bcontent\s*=\s*(?:"([^"]*)"|'([^']*)')/i);
+    const anahtar = ad && (ad[1] ?? ad[2]).toLowerCase();
+    if (anahtar && !(anahtar in meta)) meta[anahtar] = icerik ? icerik[1] ?? icerik[2] : '';
   }
   return { scriptSrc, scripts, meta };
 }
@@ -142,7 +144,8 @@ function sinyalBirlestir(statik, tarayici) {
   };
 }
 
-const hucre = (x) => String(x ?? '').replace(/\|/g, '\\|').replace(/\n/g, ' ');
+// tablo hücresi: site metni VERİDİR — satır sonu/kontrol karakteri, HTML yorum işareti ve ters tırnak etkisiz, | kaçırılır
+const hucre = (x) => guvenliMetin(x, Infinity).replace(/\|/g, '\\|');
 const isaret = (d) => (d === 'tamam' ? '✅' : d === 'atlandı' ? '➖ atlandı' : `⚠️ ${d}`);
 const IKON = { var: '✅', yok: '➖', olcmedi: '⚠️', eksik: '❌' };
 const GRUP_IKON = {
@@ -220,55 +223,73 @@ export function kimlikSatirlari(k) {
   return s;
 }
 
+const BOLUM_SATIRLARI = {
+  dnsSunucu: [['dnssec', 'DNSSEC (alan adı kayıtlarının imzası)'], ['caa', 'CAA (hangi firma sertifika verebilir)'], ['soa', 'SOA (birincil ad sunucusu)'], ['https', 'HTTPS kaydı (DNS\'te bağlantı ipucu)'], ['ulke', 'Sunucu ülkesi'], ['yesil', 'Yeşil enerji']],
+  eposta: [['spf', 'SPF (kimler bu alan adıyla posta gönderebilir)'], ['dmarc', 'DMARC (sahte postaya ne yapılır)'], ['dkim', 'DKIM (posta imzası)'], ['mtaSts', 'MTA-STS (şifreli posta zorunluluğu)'], ['tlsRpt', 'TLS-RPT (şifreleme hata raporu)'], ['bimi', 'BIMI (gelen kutusunda marka logosu)']],
+  guvenlikEk: [['kapsam', 'Sertifika kapsamı'], ['yonlendirme', 'Yönlendirme zinciri'], ['hstsOnyukleme', 'HSTS önyükleme koşulları'], ['cerezler', 'Çerez bayrakları']],
+  dosyalar: [['robots', 'robots.txt'], ['sitemap', 'sitemap.xml'], ['securityTxt', 'security.txt'], ['llms', 'llms.txt'], ['ads', 'ads.txt'], ['humans', 'humans.txt']],
+  paylasim: [['openGraph', 'Open Graph'], ['twitter', 'Twitter Card'], ['jsonLd', 'JSON-LD türleri'], ['hreflang', 'hreflang dilleri'], ['manifest', 'Uygulama manifesti']],
+};
+const BOLUMLER_SATIRI = 'Bölümler: 🪪 Kimlik · 🧩 Teknoloji · 🌐 DNS ve sunucu · ✉️ E-posta güvenliği · 🔒 SSL ve güvenlik · 📄 Site dosyaları · 🔗 Paylaşım etiketleri';
+
+// yeni bölümlerin satırı: {durum, deger, kanit} → | ikon | ad | değer | kanıt |
+const bolumSatiri = (ad, x) => `| ${IKON[x?.durum] ?? IKON.olcmedi} | ${ad} | ${hucre(x?.deger ?? 'ölçülemedi')} | ${hucre(x?.kanit ?? '')} |`;
+
+function bolum(s, baslik, basliklar, satirlar) {
+  s.push('', baslik, '', basliklar, `|:-:|${'---|'.repeat(basliklar.split('|').length - 3)}`);
+  s.push(...satirlar);
+}
+
 function markdownYaz(r) {
   const s = [];
   s.push(`## 🔎 Teknoloji taraması — ${r.host}`);
   s.push('');
-  s.push(`Adres: ${r.sonAdres ?? r.adres} · ${new Date().toISOString().slice(0, 10)}`);
+  s.push(`Adres: ${hucre(r.sonAdres ?? r.adres)} · ${new Date().toISOString().slice(0, 10)}`);
   s.push(`Katmanlar: Sayfa kodu ${isaret(r.durum.statik)} · Tarayıcı ${isaret(r.durum.tarayici)} · DNS ${isaret(r.durum.dns)} · SSL ${isaret(r.durum.ssl)}`);
+  s.push(BOLUMLER_SATIRI);
   s.push('');
   s.push('`✅ bulundu · ➖ bulunamadı · ⚠️ ölçülemedi · ❌ eksik`');
-  for (const n of r.notlar) s.push(`> Not: ${n}`);
-  s.push('');
-  s.push('### 🪪 Site kimliği');
-  s.push('');
-  s.push('|  | Bilgi | Değer | Kaynak |');
-  s.push('|:-:|---|---|---|');
-  for (const [i, b, d, k] of kimlikSatirlari(r.kimlik)) s.push(`| ${i} | ${b} | ${hucre(d)} | ${hucre(k)} |`);
-  s.push('');
-  s.push('### 🧩 Teknolojiler');
-  s.push('');
-  s.push('|  | Grup | Teknoloji | Sürüm (yıl) | Güncel sürüm | Kanıt |');
-  s.push('|:-:|---|---|---|---|---|');
+  for (const n of r.notlar) s.push(`> Not: ${hucre(n)}`);
+
+  bolum(s, '### 🪪 Site kimliği', '|  | Bilgi | Değer | Kaynak |',
+    kimlikSatirlari(r.kimlik).map(([i, b, d, k]) => `| ${i} | ${b} | ${hucre(d)} | ${hucre(k)} |`));
+
+  const tek = [];
   for (const g of r.grupSirasi) {
     const liste = r.gruplar[g];
     const baslik = `${GRUP_IKON[g] ?? ''} **${g}**`;
     if (!liste?.length) {
       if (g === 'Diğer') continue;
       const neden = r.olculemeyenGruplar[g];
-      s.push(neden ? `| ${IKON.olcmedi} | ${baslik} | ölçülemedi — ${neden} |  |  |  |` : `| ${IKON.yok} | ${baslik} | bulunamadı |  |  |  |`);
+      tek.push(neden ? `| ${IKON.olcmedi} | ${baslik} | ölçülemedi — ${hucre(neden)} |  |  |  |` : `| ${IKON.yok} | ${baslik} | bulunamadı |  |  |  |`);
       continue;
     }
     liste.forEach((t, i) => {
       const guven = t.guven != null && t.guven < 100 ? ` (olasılık %${t.guven})` : '';
       const [surum, guncel] = surumHucreleri(t);
-      s.push(`| ${i === 0 ? IKON.var : ''} | ${i === 0 ? baslik : ''} | ${hucre(t.ad)}${guven} | ${hucre(surum)} | ${hucre(guncel)} | ${hucre(t.kanit?.join(' · ') ?? '')} |`);
+      tek.push(`| ${i === 0 ? IKON.var : ''} | ${i === 0 ? baslik : ''} | ${hucre(t.ad)}${guven} | ${hucre(surum)} | ${hucre(guncel)} | ${hucre(t.kanit?.join(' · ') ?? '')} |`);
     });
   }
-  s.push('');
-  s.push('### 🔒 SSL ve güvenlik başlıkları');
-  s.push('');
-  s.push('|  | Kontrol | Sonuç |');
-  s.push('|:-:|---|---|');
+  bolum(s, '### 🧩 Teknolojiler', '|  | Grup | Teknoloji | Sürüm (yıl) | Güncel sürüm | Kanıt |', tek);
+
+  bolum(s, '### 🌐 DNS ve sunucu', '|  | Kontrol | Sonuç | Kanıt |', BOLUM_SATIRLARI.dnsSunucu.map(([k, ad]) => bolumSatiri(ad, r.dnsSunucu?.[k])));
+  bolum(s, '### ✉️ E-posta güvenliği', '|  | Kontrol | Sonuç | Kanıt |', BOLUM_SATIRLARI.eposta.map(([k, ad]) => bolumSatiri(ad, r.eposta?.[k])));
+
+  const ssl = [];
   if (r.ssl) {
-    s.push(`| ${r.ssl.gecerli ? IKON.var : IKON.eksik} | Sertifika | ${hucre(r.ssl.veren ?? '?')} · bitiş ${gun(r.ssl.bitis)} · ${r.ssl.tls ?? ''} · zincir ${r.ssl.gecerli ? 'geçerli' : '**GEÇERSİZ**'} |`);
+    ssl.push(`| ${r.ssl.gecerli ? IKON.var : IKON.eksik} | Sertifika | ${hucre(r.ssl.veren ?? '?')} · bitiş ${gun(r.ssl.bitis)} · ${r.ssl.tls ?? ''} · zincir ${r.ssl.gecerli ? 'geçerli' : '**GEÇERSİZ**'} |  |`);
   } else if (r.durum.ssl === 'atlandı') {
-    s.push(`| ${IKON.yok} | Sertifika | şifresiz adres (http), bakılmadı |`);
-  } else s.push(`| ${IKON.olcmedi} | Sertifika | ölçülemedi |`);
+    ssl.push(`| ${IKON.yok} | Sertifika | şifresiz adres (http), bakılmadı |  |`);
+  } else ssl.push(`| ${IKON.olcmedi} | Sertifika | ölçülemedi |  |`);
   for (const [k, ad] of GUVENLIK_BASLIKLARI) {
     const v = r.guvenlik?.find((x) => x[0] === k);
-    s.push(v ? `| ${v[2] ? IKON.var : IKON.eksik} | ${ad} | ${v[2] ? 'var' : 'yok'} |` : `| ${IKON.olcmedi} | ${ad} | ölçülemedi |`);
+    ssl.push(v ? `| ${v[2] ? IKON.var : IKON.eksik} | ${ad} | ${v[2] ? 'var' : 'yok'} | yanıt başlığı |` : `| ${IKON.olcmedi} | ${ad} | ölçülemedi |  |`);
   }
+  for (const [k, ad] of BOLUM_SATIRLARI.guvenlikEk) ssl.push(bolumSatiri(ad, r.guvenlikEk?.[k]));
+  bolum(s, '### 🔒 SSL ve güvenlik', '|  | Kontrol | Sonuç | Kanıt |', ssl);
+
+  bolum(s, '### 📄 Site dosyaları', '|  | Dosya | Sonuç | Kanıt |', BOLUM_SATIRLARI.dosyalar.map(([k, ad]) => bolumSatiri(ad, r.dosyalar?.[k])));
+  bolum(s, '### 🔗 Paylaşım etiketleri', '|  | Etiket | Sonuç | Kanıt |', BOLUM_SATIRLARI.paylasim.map(([k, ad]) => bolumSatiri(ad, r.paylasim?.[k])));
   return s.join('\n');
 }
 
@@ -412,7 +433,7 @@ export async function calistir(girdi, { statik: yalnizStatik = false } = {}) {
 
 function olculemedi(host, neden) {
   return {
-    host, cikis: 2, gruplar: {}, durum: { statik: 'ölçülemedi', tarayici: 'ölçülemedi', dns: 'ölçülemedi', ssl: 'ölçülemedi' },
+    surum: SURUM, host, cikis: 2, gruplar: {}, durum: { statik: 'ölçülemedi', tarayici: 'ölçülemedi', dns: 'ölçülemedi', ssl: 'ölçülemedi' },
     markdown: `## Teknoloji taraması — ${host}\n\n**ÖLÇÜLEMEDİ:** ${neden}\n\nHiçbir teknoloji listesi üretilmedi; bu "teknoloji yok" demek değildir.`,
   };
 }
@@ -427,7 +448,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const r = await calistir(adres, { statik: arg.includes('--statik') });
   if (arg.includes('--json')) {
     const { grupSirasi, olculemeyenGruplar, ...cikti } = r;
-    process.stdout.write(JSON.stringify(cikti));
+    process.stdout.write(JSON.stringify(yorumSuz(cikti)));
   } else process.stdout.write(r.markdown + '\n');
   // Model komut çıktısını kullanıcının gördüğünü sanıp yalnız yorum yazabiliyordu (4 koşuda 1);
   // talimat SKILL.md'nin başında değil, cevabı yazmadan hemen önce okuduğu yerde durmalı.
