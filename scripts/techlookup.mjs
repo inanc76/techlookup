@@ -13,6 +13,7 @@ import { veritabaniDerle, eslestir, tarayiciIstekleri } from './eslesme.mjs';
 import { grupla, GRUPLAR } from './kategoriler.mjs';
 import { dnsTopla, dnsYorumla, kokAlan, dnsGuvenlik, sunucuBilgisi } from './dns.mjs';
 import { satir, SURUM } from './ortak.mjs';
+import { epostaGuvenligi } from './eposta.mjs';
 import { tarayiciTara } from './tarayici.mjs';
 import { alanAdiSorgula, ajansBul, sablonTarihi } from './kimlik.mjs';
 import { surumleriEkle } from './surum.mjs';
@@ -276,6 +277,7 @@ export async function calistir(girdi, { statik: yalnizStatik = false } = {}) {
   const yerel = /^(localhost|127\.|\d+\.\d+\.\d+\.\d+$)/.test(host);
   const yerelSatir = () => satir('olcmedi', 'ölçülemedi — yerel adres, DNS ve dış kaynak sorulmadı');
   const dnsGuvenlikSozu = yerel ? Promise.resolve(null) : dnsGuvenlik(kokAlan(host), host);
+  const epostaSozu = yerel ? Promise.resolve(null) : epostaGuvenligi(kokAlan(host));
   const alanAdiSozu = yerel ? Promise.resolve({ durum: 'ölçülemedi (yerel adres, alan adı kaydı yok)' }) : alanAdiSorgula(host);
   const [st, dnsHam, ssl] = await Promise.all([
     statikTara(adres),
@@ -333,7 +335,8 @@ export async function calistir(girdi, { statik: yalnizStatik = false } = {}) {
   if (!dnsHam) for (const g of ['E-posta altyapısı', 'Doğrulama kayıtları']) olculemeyenGruplar[g] = yerel ? 'yerel adres, DNS sorgusu yapılmadı' : 'DNS sorgusu cevap vermedi';
   if (!tarayiciVeri) for (const g of TARAYICI_GRUPLARI) olculemeyenGruplar[g] = `tarayıcı katmanı ${tr.durum === 'atlandı' ? 'atlandı' : 'çalışmadı'}, sonradan yüklenen araçlar görünmez`;
 
-  const [alanAdi, sablon, , dnsG, sunucu] = await Promise.all([alanAdiSozu, sablonSozu, surumleriEkle(gruplar), dnsGuvenlikSozu, sunucuSozu]);
+  const [alanAdi, sablon, , dnsG, sunucu, epostaHam] = await Promise.all([alanAdiSozu, sablonSozu, surumleriEkle(gruplar), dnsGuvenlikSozu, sunucuSozu, epostaSozu]);
+  const eposta = Object.fromEntries(['spf', 'dmarc', 'dkim', 'mtaSts', 'tlsRpt', 'bimi'].map((k) => [k, epostaHam?.[k] ?? yerelSatir()]));
   const dnsSunucu = {
     dnssec: dnsG?.dnssec ?? yerelSatir(), caa: dnsG?.caa ?? yerelSatir(), soa: dnsG?.soa ?? yerelSatir(), https: dnsG?.https ?? yerelSatir(),
     ulke: sunucu?.ulke ?? yerelSatir(), yesil: sunucu?.yesil ?? yerelSatir(),
@@ -341,12 +344,13 @@ export async function calistir(girdi, { statik: yalnizStatik = false } = {}) {
   const kimlik = { alanAdi, ajans: ajansBul(sinyal.html, host), sablon };
 
   const r = {
-    surum: SURUM, adres, host, sonAdres: sinyal.url, notlar, gruplar, dislanan, grupSirasi, olculemeyenGruplar, kimlik, dnsSunucu,
+    surum: SURUM, adres, host, sonAdres: sinyal.url, notlar, gruplar, dislanan, grupSirasi, olculemeyenGruplar, kimlik, dnsSunucu, eposta,
     durum: {
       statik: st.durum,
       tarayici: tr.durum,
       dns: yerel ? 'atlandı' : dnsHam ? 'tamam' : 'ölçülemedi',
       ssl: ssl === undefined ? 'atlandı' : ssl ? 'tamam' : 'ölçülemedi',
+      eposta: yerel ? 'atlandı' : Object.values(eposta).every((x) => x.durum === 'olcmedi') ? 'ölçülemedi' : 'tamam',
       ulke: yerel ? 'atlandı' : dnsSunucu.ulke.durum === 'olcmedi' ? 'ölçülemedi' : 'tamam',
       yesilEnerji: yerel ? 'atlandı' : dnsSunucu.yesil.durum === 'olcmedi' ? 'ölçülemedi' : 'tamam',
     },

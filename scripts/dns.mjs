@@ -148,7 +148,7 @@ async function dig(tur, ad) {
 }
 
 // TXT kaydı tırnaklı ve parçalı gelir: "v=spf1 ..." "...devamı"
-const txtBirlestir = (s) => s.replace(/"\s+"/g, '').replace(/^"|"$/g, '');
+export const txtBirlestir = (s) => s.replace(/"\s+"/g, '').replace(/^"|"$/g, '');
 
 // alan adının kökü: www.ornek.com.tr → ornek.com.tr (basit kural; iki seviyeli TR uzantıları dahil)
 export function kokAlan(host) {
@@ -237,7 +237,7 @@ export async function digSor(tur, ad, { calistir = digAyrintili, yedek = YEDEK }
   return { ...digCoz(r.stdout, tur), yedek: kullanilan };
 }
 
-const yedekNotu = (c) => (c.yedek ? ` · ${c.yedek} üzerinden (yerel çözümleyici cevap vermedi)` : '');
+export const yedekNotu = (c) => (c.yedek ? ` · ${c.yedek} üzerinden (yerel çözümleyici cevap vermedi)` : '');
 
 // NOERROR + kayıt → var · NOERROR-boş / NXDOMAIN → yok · SERVFAIL, zaman aşımı, dig yok → ölçülemedi
 function dnsSatiri(c, varsa, yoksa) {
