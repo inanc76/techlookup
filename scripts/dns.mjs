@@ -1,6 +1,7 @@
 // DNS kayıtlarından e-posta altyapısı, doğrulama kayıtları ve DNS/barındırma sağlayıcısı çıkarır.
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { lookup as dnsLookup } from 'node:dns/promises';
 import { satir, sinirliGetir, jsonCoz, sureSiniri, sureMetni } from './ortak.mjs';
 
 const koş = promisify(execFile);
@@ -357,4 +358,16 @@ async function sunucuBilgisiIc(host, ip, getir) {
       ? satir('var', `evet${g.veri.hosted_by ? ` · ${String(g.veri.hosted_by).slice(0, 60)}` : ''}`, 'Green Web Foundation kaydı')
       : satir('yok', 'kayıtta yeşil enerji beyanı yok', 'Green Web Foundation');
   return { ulke, yesil: yesilSatir };
+}
+
+/** Sunucu ülkesi için IP: önce dig A; boşsa işletim sisteminin çözümleyicisi (sayfayı açan yol da odur). */
+export async function sunucuIp(host, dnsHam, { lookup = dnsLookup } = {}) {
+  const ip = dnsHam?.a?.[0];
+  if (ip) return { ip, kaynak: 'dig A' };
+  try {
+    const { address } = await lookup(host, { family: 4 });
+    return { ip: address, kaynak: 'sistem çözümleyicisi' };
+  } catch {
+    return { ip: null };
+  }
 }

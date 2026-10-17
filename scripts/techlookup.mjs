@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 import tls from 'node:tls';
 import { veritabaniDerle, eslestir, tarayiciIstekleri, adresTeknolojileri } from './eslesme.mjs';
 import { grupla, GRUPLAR } from './kategoriler.mjs';
-import { dnsTopla, dnsYorumla, kokAlan, dnsGuvenlik, sunucuBilgisi } from './dns.mjs';
+import { dnsTopla, dnsYorumla, kokAlan, dnsGuvenlik, sunucuBilgisi, sunucuIp } from './dns.mjs';
 import { satir, SURUM, guvenliMetin, yorumSuz } from './ortak.mjs';
 import { cmsSurumu } from './cms-surum.mjs';
 import { wordpressIzleri, disAlanAdlari, paylasimEtiketleri } from './sayfa.mjs';
@@ -117,7 +117,7 @@ function sslTara(host) {
   });
 }
 
-const GUVENLIK_BASLIKLARI = [
+export const GUVENLIK_BASLIKLARI = [
   ['strict-transport-security', 'HSTS (yalnız şifreli bağlantı zorunlu)'],
   ['content-security-policy', 'CSP (hangi kaynaktan kod yükleneceği sınırı)'],
   ['x-frame-options', 'X-Frame-Options (başka sitenin çerçevesine gömülme engeli)'],
@@ -147,7 +147,7 @@ function sinyalBirlestir(statik, tarayici) {
 // tablo hücresi: site metni VERİDİR — satır sonu/kontrol karakteri, HTML yorum işareti ve ters tırnak etkisiz, | kaçırılır
 const hucre = (x) => guvenliMetin(x, Infinity).replace(/\|/g, '\\|');
 const isaret = (d) => (d === 'tamam' ? '✅' : d === 'atlandı' ? '➖ atlandı' : `⚠️ ${d}`);
-const IKON = { var: '✅', yok: '➖', olcmedi: '⚠️', eksik: '❌' };
+export const IKON = { var: '✅', yok: '➖', olcmedi: '⚠️', eksik: '❌' };
 const GRUP_IKON = {
   Frontend: '🎨', Backend: '⚙️', CMS: '📝', 'E-ticaret': '🛒', 'PaaS / Barındırma': '☁️', 'CDN ve güvenlik': '🛡️',
   Analytics: '📊', 'Etiket yöneticisi': '🏷️', 'Reklam pikselleri': '🎯', 'Canlı destek / CRM': '💬', 'Çerez onayı': '🍪',
@@ -223,7 +223,7 @@ export function kimlikSatirlari(k) {
   return s;
 }
 
-const BOLUM_SATIRLARI = {
+export const BOLUM_SATIRLARI = {
   dnsSunucu: [['dnssec', 'DNSSEC (alan adı kayıtlarının imzası)'], ['caa', 'CAA (hangi firma sertifika verebilir)'], ['soa', 'SOA (birincil ad sunucusu)'], ['https', 'HTTPS kaydı (DNS\'te bağlantı ipucu)'], ['ulke', 'Sunucu ülkesi'], ['yesil', 'Yeşil enerji']],
   eposta: [['spf', 'SPF (kimler bu alan adıyla posta gönderebilir)'], ['dmarc', 'DMARC (sahte postaya ne yapılır)'], ['dkim', 'DKIM (posta imzası)'], ['mtaSts', 'MTA-STS (şifreli posta zorunluluğu)'], ['tlsRpt', 'TLS-RPT (şifreleme hata raporu)'], ['bimi', 'BIMI (gelen kutusunda marka logosu)']],
   guvenlikEk: [['kapsam', 'Sertifika kapsamı'], ['yonlendirme', 'Yönlendirme zinciri'], ['hstsOnyukleme', 'HSTS önyükleme koşulları'], ['cerezler', 'Çerez bayrakları']],
@@ -231,6 +231,23 @@ const BOLUM_SATIRLARI = {
   paylasim: [['openGraph', 'Open Graph'], ['twitter', 'Twitter Card'], ['jsonLd', 'JSON-LD türleri'], ['hreflang', 'hreflang dilleri'], ['manifest', 'Uygulama manifesti']],
 };
 const BOLUMLER_SATIRI = 'Bölümler: 🪪 Kimlik · 🧩 Teknoloji · 🌐 DNS ve sunucu · ✉️ E-posta güvenliği · 🔒 SSL ve güvenlik · 📄 Site dosyaları · 🔗 Paylaşım etiketleri';
+
+/** SSL ve güvenlik bölümü: [ikon, kontrol, sonuç, kanıt] — tablo ve toplu CSV aynı satırı kullanır. */
+export function sslSatirlari(r) {
+  const ssl = [];
+  if (r.ssl) ssl.push([r.ssl.gecerli ? IKON.var : IKON.eksik, 'Sertifika', `${r.ssl.veren ?? '?'} · bitiş ${gun(r.ssl.bitis)} · ${r.ssl.tls ?? ''} · zincir ${r.ssl.gecerli ? 'geçerli' : '**GEÇERSİZ**'}`, '']);
+  else if (r.durum.ssl === 'atlandı') ssl.push([IKON.yok, 'Sertifika', 'şifresiz adres (http), bakılmadı', '']);
+  else ssl.push([IKON.olcmedi, 'Sertifika', 'ölçülemedi', '']);
+  for (const [k, ad] of GUVENLIK_BASLIKLARI) {
+    const v = r.guvenlik?.find((x) => x[0] === k);
+    ssl.push(v ? [v[2] ? IKON.var : IKON.eksik, ad, v[2] ? 'var' : 'yok', 'yanıt başlığı'] : [IKON.olcmedi, ad, 'ölçülemedi', '']);
+  }
+  for (const [k, ad] of BOLUM_SATIRLARI.guvenlikEk) {
+    const x = r.guvenlikEk?.[k];
+    ssl.push([IKON[x?.durum] ?? IKON.olcmedi, ad, x?.deger ?? 'ölçülemedi', x?.kanit ?? '']);
+  }
+  return ssl;
+}
 
 // yeni bölümlerin satırı: {durum, deger, kanit} → | ikon | ad | değer | kanıt |
 const bolumSatiri = (ad, x) => `| ${IKON[x?.durum] ?? IKON.olcmedi} | ${ad} | ${hucre(x?.deger ?? 'ölçülemedi')} | ${hucre(x?.kanit ?? '')} |`;
@@ -275,18 +292,7 @@ function markdownYaz(r) {
   bolum(s, '### 🌐 DNS ve sunucu', '|  | Kontrol | Sonuç | Kanıt |', BOLUM_SATIRLARI.dnsSunucu.map(([k, ad]) => bolumSatiri(ad, r.dnsSunucu?.[k])));
   bolum(s, '### ✉️ E-posta güvenliği', '|  | Kontrol | Sonuç | Kanıt |', BOLUM_SATIRLARI.eposta.map(([k, ad]) => bolumSatiri(ad, r.eposta?.[k])));
 
-  const ssl = [];
-  if (r.ssl) {
-    ssl.push(`| ${r.ssl.gecerli ? IKON.var : IKON.eksik} | Sertifika | ${hucre(r.ssl.veren ?? '?')} · bitiş ${gun(r.ssl.bitis)} · ${r.ssl.tls ?? ''} · zincir ${r.ssl.gecerli ? 'geçerli' : '**GEÇERSİZ**'} |  |`);
-  } else if (r.durum.ssl === 'atlandı') {
-    ssl.push(`| ${IKON.yok} | Sertifika | şifresiz adres (http), bakılmadı |  |`);
-  } else ssl.push(`| ${IKON.olcmedi} | Sertifika | ölçülemedi |  |`);
-  for (const [k, ad] of GUVENLIK_BASLIKLARI) {
-    const v = r.guvenlik?.find((x) => x[0] === k);
-    ssl.push(v ? `| ${v[2] ? IKON.var : IKON.eksik} | ${ad} | ${v[2] ? 'var' : 'yok'} | yanıt başlığı |` : `| ${IKON.olcmedi} | ${ad} | ölçülemedi |  |`);
-  }
-  for (const [k, ad] of BOLUM_SATIRLARI.guvenlikEk) ssl.push(bolumSatiri(ad, r.guvenlikEk?.[k]));
-  bolum(s, '### 🔒 SSL ve güvenlik', '|  | Kontrol | Sonuç | Kanıt |', ssl);
+  bolum(s, '### 🔒 SSL ve güvenlik', '|  | Kontrol | Sonuç | Kanıt |', sslSatirlari(r).map(([i, ad, d, k]) => `| ${i} | ${ad} | ${hucre(d)} | ${hucre(k)} |`));
 
   bolum(s, '### 📄 Site dosyaları', '|  | Dosya | Sonuç | Kanıt |', BOLUM_SATIRLARI.dosyalar.map(([k, ad]) => bolumSatiri(ad, r.dosyalar?.[k])));
   bolum(s, '### 🔗 Paylaşım etiketleri', '|  | Etiket | Sonuç | Kanıt |', BOLUM_SATIRLARI.paylasim.map(([k, ad]) => bolumSatiri(ad, r.paylasim?.[k])));
@@ -319,7 +325,8 @@ export async function calistir(girdi, { statik: yalnizStatik = false } = {}) {
     adres.startsWith('https:') && !yerel ? sslTara(host) : Promise.resolve(undefined),
   ]);
   if (st.cozulemedi) return olculemedi(host, 'alan adı çözülemedi (DNS kaydı yok)');
-  const sunucuSozu = yerel ? Promise.resolve(null) : sunucuBilgisi(host, dnsHam?.a?.[0]);
+  // dig A yerel çözümleyicide zaman aşımına düşebiliyor (ölçüldü 2026-10-17): IP yoksa sistem çözümleyicisi
+  const sunucuSozu = yerel ? Promise.resolve(null) : sunucuIp(host, dnsHam).then(({ ip }) => sunucuBilgisi(host, ip));
   const dosyalarSozu = siteDosyalari(new URL(st.veri?.url ?? adres).origin);
 
   // arşiv karşılaştırması tarayıcıyla aynı anda koşar; canlı iz ham sayfa kodundan çıkar (arşiv de ham kodu verir)
@@ -431,9 +438,15 @@ export async function calistir(girdi, { statik: yalnizStatik = false } = {}) {
   return r;
 }
 
+/** --json çıktısı: iç alanlar atılır, site metnindeki yorum işaretleri etkisizleşir. bin/ aynı işlevi kullanır. */
+export function jsonMetni(r) {
+  const { grupSirasi, olculemeyenGruplar, ...cikti } = r;
+  return JSON.stringify(yorumSuz(cikti));
+}
+
 function olculemedi(host, neden) {
   return {
-    surum: SURUM, host, cikis: 2, gruplar: {}, durum: { statik: 'ölçülemedi', tarayici: 'ölçülemedi', dns: 'ölçülemedi', ssl: 'ölçülemedi' },
+    surum: SURUM, host, cikis: 2, neden, gruplar: {}, durum: { statik: 'ölçülemedi', tarayici: 'ölçülemedi', dns: 'ölçülemedi', ssl: 'ölçülemedi' },
     markdown: `## Teknoloji taraması — ${host}\n\n**ÖLÇÜLEMEDİ:** ${neden}\n\nHiçbir teknoloji listesi üretilmedi; bu "teknoloji yok" demek değildir.`,
   };
 }
@@ -446,10 +459,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     process.exit(2);
   }
   const r = await calistir(adres, { statik: arg.includes('--statik') });
-  if (arg.includes('--json')) {
-    const { grupSirasi, olculemeyenGruplar, ...cikti } = r;
-    process.stdout.write(JSON.stringify(yorumSuz(cikti)));
-  } else process.stdout.write(r.markdown + '\n');
+  if (arg.includes('--json')) process.stdout.write(jsonMetni(r));
+  else process.stdout.write(r.markdown + '\n');
   // Model komut çıktısını kullanıcının gördüğünü sanıp yalnız yorum yazabiliyordu (4 koşuda 1);
   // talimat SKILL.md'nin başında değil, cevabı yazmadan hemen önce okuduğu yerde durmalı.
   if (arg.includes('--skill') && !arg.includes('--json')) {

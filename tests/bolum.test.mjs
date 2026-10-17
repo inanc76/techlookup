@@ -120,6 +120,9 @@ test('K38 site metni veridir — gövde basılmaz, kısa değer süzülür, yoru
   assert.equal(yorumlar.length, 1, `betik dışı yorum satırı: ${yorumlar.join(' ⏎ ')}`);
   assert.equal(yorumlar[0], satirlar.at(-1), 'tek yorum satırı betiğin son satırı değil');
   assert.ok(!ham.includes('<!--'), '--json çıktısına yorum işareti girdi');
+  // npx yolu (bin/) da aynı süzgeçten geçer
+  const bin = (await koş('node', [join(kok, 'bin', 'techlookup.mjs'), `${taban}/`, '--statik', '--json'], { timeout: 120_000, maxBuffer: 50e6 })).stdout;
+  assert.ok(!bin.includes('<!--'), 'bin/ --json çıktısına yorum işareti girdi');
   for (const metin of [md, ham]) assert.ok(!metin.includes('LLMS-GOVDE-77'), 'llms.txt gövdesi basıldı');
   const og = satirlar.find((s) => s.startsWith('|') && s.includes('Open Graph'));
   assert.ok(og, 'Open Graph satırı yok');

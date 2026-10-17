@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { dnsGuvenlik, sunucuBilgisi, guvenliAd } from '../scripts/dns.mjs';
+import { dnsGuvenlik, sunucuBilgisi, guvenliAd, sunucuIp } from '../scripts/dns.mjs';
 
 const kok = dirname(dirname(fileURLToPath(import.meta.url)));
 const F = JSON.parse(readFileSync(join(kok, 'tests', 'fikstur', 'dns-cevaplari.json'), 'utf8'));
@@ -92,4 +92,14 @@ test('K34 sunucu ülkesi + yeşil enerji — kaynak cevabından; hata ve 429 öl
 
   const ipsiz = await sunucuBilgisi('www.example.org', null, { getir: getir(() => F['greenweb-yesil']) });
   assert.equal(ipsiz.ulke.durum, 'olcmedi');
+});
+
+test('K34b sunucu IP — dig A boş gelirse sistem çözümleyicisine düşer (sayfa açıldıysa IP vardır)', async () => {
+  const lookup = async () => ({ address: '192.0.2.7', family: 4 });
+  assert.deepEqual(await sunucuIp('www.example.com', { a: [] }, { lookup }), { ip: '192.0.2.7', kaynak: 'sistem çözümleyicisi' });
+  assert.deepEqual(await sunucuIp('www.example.com', null, { lookup }), { ip: '192.0.2.7', kaynak: 'sistem çözümleyicisi' });
+  const cagrilmaz = async () => { throw new Error('dig IP verdiyse çağrılmamalı'); };
+  assert.deepEqual(await sunucuIp('www.example.com', { a: ['192.0.2.1'] }, { lookup: cagrilmaz }), { ip: '192.0.2.1', kaynak: 'dig A' });
+  const bulunamaz = async () => { throw Object.assign(new Error('bulunamadı'), { code: 'ENOTFOUND' }); };
+  assert.equal((await sunucuIp('www.example.com', { a: [] }, { lookup: bulunamaz })).ip, null);
 });
