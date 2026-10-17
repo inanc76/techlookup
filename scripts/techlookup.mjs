@@ -14,6 +14,7 @@ import { grupla, GRUPLAR } from './kategoriler.mjs';
 import { dnsTopla, dnsYorumla, kokAlan, dnsGuvenlik, sunucuBilgisi } from './dns.mjs';
 import { satir, SURUM } from './ortak.mjs';
 import { epostaGuvenligi } from './eposta.mjs';
+import { siteDosyalari } from './dosyalar.mjs';
 import { sertifikaKapsami, hstsKosullari, setCookieBayraklari, cerezSatiri, yonlendirmeZinciri } from './guvenlik.mjs';
 import { tarayiciTara } from './tarayici.mjs';
 import { alanAdiSorgula, ajansBul, sablonTarihi } from './kimlik.mjs';
@@ -292,6 +293,7 @@ export async function calistir(girdi, { statik: yalnizStatik = false } = {}) {
   ]);
   if (st.cozulemedi) return olculemedi(host, 'alan adı çözülemedi (DNS kaydı yok)');
   const sunucuSozu = yerel ? Promise.resolve(null) : sunucuBilgisi(host, dnsHam?.a?.[0]);
+  const dosyalarSozu = siteDosyalari(new URL(st.veri?.url ?? adres).origin);
 
   // arşiv karşılaştırması tarayıcıyla aynı anda koşar; canlı iz ham sayfa kodundan çıkar (arşiv de ham kodu verir)
   const sablonSozu = yerel ? Promise.resolve({ durum: 'ölçülemedi (yerel adres, arşivde yok)' })
@@ -349,16 +351,18 @@ export async function calistir(girdi, { statik: yalnizStatik = false } = {}) {
   if (!dnsHam) for (const g of ['E-posta altyapısı', 'Doğrulama kayıtları']) olculemeyenGruplar[g] = yerel ? 'yerel adres, DNS sorgusu yapılmadı' : 'DNS sorgusu cevap vermedi';
   if (!tarayiciVeri) for (const g of TARAYICI_GRUPLARI) olculemeyenGruplar[g] = `tarayıcı katmanı ${tr.durum === 'atlandı' ? 'atlandı' : 'çalışmadı'}, sonradan yüklenen araçlar görünmez`;
 
-  const [alanAdi, sablon, , dnsG, sunucu, epostaHam] = await Promise.all([alanAdiSozu, sablonSozu, surumleriEkle(gruplar), dnsGuvenlikSozu, sunucuSozu, epostaSozu]);
+  const [alanAdi, sablon, , dnsG, sunucu, epostaHam, dosyalar] = await Promise.all([alanAdiSozu, sablonSozu, surumleriEkle(gruplar), dnsGuvenlikSozu, sunucuSozu, epostaSozu, dosyalarSozu]);
   const eposta = Object.fromEntries(['spf', 'dmarc', 'dkim', 'mtaSts', 'tlsRpt', 'bimi'].map((k) => [k, epostaHam?.[k] ?? yerelSatir()]));
   const dnsSunucu = {
     dnssec: dnsG?.dnssec ?? yerelSatir(), caa: dnsG?.caa ?? yerelSatir(), soa: dnsG?.soa ?? yerelSatir(), https: dnsG?.https ?? yerelSatir(),
     ulke: sunucu?.ulke ?? yerelSatir(), yesil: sunucu?.yesil ?? yerelSatir(),
   };
-  const kimlik = { alanAdi, ajans: ajansBul(sinyal.html, host), sablon };
+  // sayfadaki imza önceliklidir; yoksa humans.txt'teki ajans adayı
+  const humans = dosyalar.humans.ajans;
+  const kimlik = { alanAdi, ajans: ajansBul(sinyal.html, host) ?? (humans ? { ad: humans.ad, alan: null, kanit: humans.kanit } : null), sablon };
 
   const r = {
-    surum: SURUM, adres, host, sonAdres: sinyal.url, notlar, gruplar, dislanan, grupSirasi, olculemeyenGruplar, kimlik, dnsSunucu, eposta, guvenlikEk,
+    surum: SURUM, adres, host, sonAdres: sinyal.url, notlar, gruplar, dislanan, grupSirasi, olculemeyenGruplar, kimlik, dnsSunucu, eposta, guvenlikEk, dosyalar,
     durum: {
       statik: st.durum,
       tarayici: tr.durum,
@@ -366,6 +370,7 @@ export async function calistir(girdi, { statik: yalnizStatik = false } = {}) {
       ssl: ssl === undefined ? 'atlandı' : ssl ? 'tamam' : 'ölçülemedi',
       eposta: yerel ? 'atlandı' : Object.values(eposta).every((x) => x.durum === 'olcmedi') ? 'ölçülemedi' : 'tamam',
       yonlendirme: guvenlikEk.yonlendirme.durum === 'olcmedi' ? 'ölçülemedi' : 'tamam',
+      dosyalar: Object.values(dosyalar).every((x) => x.durum === 'olcmedi') ? 'ölçülemedi' : 'tamam',
       ulke: yerel ? 'atlandı' : dnsSunucu.ulke.durum === 'olcmedi' ? 'ölçülemedi' : 'tamam',
       yesilEnerji: yerel ? 'atlandı' : dnsSunucu.yesil.durum === 'olcmedi' ? 'ölçülemedi' : 'tamam',
     },
