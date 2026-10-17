@@ -192,3 +192,15 @@ export function eslestir(db, sinyal) {
 
   return [...bulunan.values()];
 }
+
+// Tek bir adres hangi teknolojiye ait? (script adresi + ağ isteği host deseni) — "Dış alan adları" dışlaması için
+export function adresTeknolojileri(db, adres) {
+  let host;
+  try { host = new URL(adres).hostname; } catch { return []; }
+  const sonuc = [];
+  for (const t of db) {
+    const eslesti = t.scriptSrc.some((d) => d.regex?.test(adres)) || t.xhr.some((d) => d.regex?.test(host));
+    if (eslesti) sonuc.push({ ad: t.ad, kategoriler: t.kategoriler });
+  }
+  return sonuc;
+}

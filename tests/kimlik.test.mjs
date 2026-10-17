@@ -1,5 +1,5 @@
 // /techlookup kimlik ölçütleri — `node --test ~/.claude/skills/techlookup/tests/kimlik.test.mjs`
-// K10 alan adı · K11 ajans · K12 şablon izi · K13 şablon sınırı · K14 sabit tablo
+// K10 alan adı · K11 ajans · K12 şablon izi · K13 şablon sınırı · K14 sabit tablo · K30 arşivde ilk görülme
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
@@ -210,4 +210,29 @@ test('K17 önceki ajans satırı — bulundu · imza yok · önceki şablon yok 
   assert.match(satir({ ...sablon, oncekiAjans: null })[2], /imza bulunamadı/);
   assert.match(satir({ ...sablon, sonFarkli: null })[2], /önceki şablon yok/);
   assert.equal(satir({ durum: 'ölçülemedi (archive.org: ECONNREFUSED)' })[0], '⚠️');
+});
+
+test('K30 arşivde ilk görülme — ilk ay ve kayıtlı ay sayısı, şablon izi olmasa da; ek istek yok', async () => {
+  const { sablonTarihi } = await kimlik();
+  const { kimlikSatirlari } = await import(join(kok, 'scripts', 'techlookup.mjs'));
+  const zamanlar = ['20090315000000', '20100601000000', '20240101000000'];
+  const istekler = [];
+  const getir = async (u) => {
+    istekler.push(u);
+    if (u.includes('/cdx/')) return JSON.stringify([['timestamp'], ...zamanlar.map((z) => [z])]);
+    throw new Error('beklenmedik arşiv kaydı isteği');
+  };
+  const r = await sablonTarihi('ornek.gov.tr', '<html><body>x</body></html>', { getir });
+  assert.match(r.durum, /şablon izi yok/);
+  assert.equal(r.ilkKayit, '20090315000000');
+  assert.equal(r.aySayisi, 3);
+  assert.equal(istekler.length, 1, `ilk görülme için ek istek atıldı: ${istekler}`);
+  const satir = (t) => kimlikSatirlari({ alanAdi: { durum: 'ölçülemedi' }, ajans: null, sablon: t }).find((x) => x[1] === 'Arşivde ilk görülme');
+  const v = satir(r);
+  assert.equal(v?.[0], '✅', JSON.stringify(v));
+  assert.match(v[2], /Mart 2009/);
+  assert.match(v[2], /3 ay/);
+  const bos = await sablonTarihi('ornek.gov.tr', fikstur('sablon-a2.html'), { getir: async () => JSON.stringify([['timestamp']]) });
+  assert.equal(satir(bos)?.[0], '➖', JSON.stringify(satir(bos)));
+  assert.equal(satir({ durum: 'ölçülemedi (archive.org: ECONNREFUSED)' })?.[0], '⚠️');
 });

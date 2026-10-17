@@ -4,6 +4,7 @@ import { spawn } from 'node:child_process';
 import { mkdtempSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { tarayiciCerezBayraklari } from './guvenlik.mjs';
 
 const CHROME_YOLLARI = [
   process.env.TECHLOOKUP_CHROME,
@@ -97,15 +98,41 @@ function sayfaIfadesi(jsYollari, domKurallari) {
   })()`;
 }
 
+// açık Chrome + geçici profil kaydı: toplu taramada Ctrl+C gelirse eşzamanlı temizlenir
+const acik = new Set();
+
+/**
+ * Kesintide (SIGINT/SIGTERM) çağrılır: açık Chrome'ları öldürür, kapanmalarını bekler, geçici profilleri siler.
+ * Öldürür öldürmez silmek yetmiyor: alt süreçler bir an daha profile yazıyor (ölçüldü 2026-10-17, klasör kaldı).
+ */
+export async function tarayicilariTemizle() {
+  const liste = [...acik];
+  acik.clear();
+  await Promise.all(liste.map(async (k) => {
+    if (k.ch && k.ch.exitCode === null) {
+      const kapandi = new Promise((r) => k.ch.once('exit', r));
+      try { k.ch.kill('SIGKILL'); } catch { /* zaten kapanmış */ }
+      await Promise.race([kapandi, bekle(3_000)]);
+    }
+    for (let i = 0; i < 8; i++) {
+      try { rmSync(k.profil, { recursive: true, force: true }); if (!existsSync(k.profil)) break; } catch { /* yazım sürüyor */ }
+      await bekle(250);
+    }
+  }));
+}
+
 /**
  * @returns {Promise<{durum: 'tamam'|string, veri?: object}>}
  */
 export async function tarayiciTara(adres, { jsYollari, domKurallari, sure = 25_000 } = {}) {
   const profil = mkdtempSync(join(tmpdir(), 'techlookup-'));
+  const kayit = { ch: null, profil };
+  acik.add(kayit);
   let ch, baglanti;
   try {
     const acilan = chromeAc(profil);
     ch = acilan.ch;
+    kayit.ch = ch;
     const port = await acilan.port;
     let sayfa;
     for (let i = 0; i < 20 && !sayfa; i++) {
@@ -148,6 +175,8 @@ export async function tarayiciTara(adres, { jsYollari, domKurallari, sure = 25_0
 
     const { cookies } = await baglanti.gonder('Network.getCookies', { urls: [veri.url] });
     veri.cookies = Object.fromEntries(cookies.map((c) => [c.name.toLowerCase(), c.value]));
+    // çıktıya giden çerez kaydı yalnız ad + bayrak; değer yalnız parmak izi eşleşmesinde kalır
+    veri.cerezBayraklari = tarayiciCerezBayraklari(cookies);
     veri.istekler = [...istekler];
     veri.headers = anaBelge ? Object.fromEntries(Object.entries(anaBelge.headers).map(([k, v]) => [k.toLowerCase(), v])) : {};
     veri.durumKodu = anaBelge?.status ?? null;
@@ -167,5 +196,6 @@ export async function tarayiciTara(adres, { jsYollari, domKurallari, sure = 25_0
     for (let i = 0; i < 5; i++) {
       try { rmSync(profil, { recursive: true, force: true }); break; } catch { await bekle(300); }
     }
+    acik.delete(kayit);
   }
 }

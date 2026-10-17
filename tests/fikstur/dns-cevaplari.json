@@ -1,0 +1,17 @@
+{
+  "_not": "dig +noall +comments +answer ham çıktıları (2026-10-17 gerçek yoklamadan; adlar nötrleştirildi). Anahtar: 'TÜR ad'. Değer: stdout; 'ZAMAN' = dig zaman aşımı (çıkış 9).",
+  "DS example.com": ";; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 10812\n;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1\n\n;; ANSWER SECTION:\nexample.com.\t\t86400\tIN\tDS\t2371 13 2 32996839A6D808AFE3EB4A795A0E6A7A39A76FC52FF228B22B76F6D6 3826F2B9\n",
+  "DS example.org": ";; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 47622\n;; flags: qr rd ra; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 1\n",
+  "CAA example.com": ";; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 54816\n;; flags: qr rd ra; QUERY: 1, ANSWER: 2, AUTHORITY: 0, ADDITIONAL: 1\n\n;; ANSWER SECTION:\nexample.com.\t\t86400\tIN\tCAA\t0 issue \"pki.goog\"\nexample.com.\t\t86400\tIN\tCAA\t0 iodef \"mailto:guvenlik@example.com\"\n",
+  "CAA example.org": ";; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 1001\n;; flags: qr rd ra; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 1\n",
+  "SOA example.com": ";; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 55284\n;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1\n\n;; ANSWER SECTION:\nexample.com.\t1711\tIN\tSOA\tns1.example.net. hostmaster.example.com. 2416932961 10000 2400 604800 1800\n",
+  "SOA example.org": ";; ->>HEADER<<- opcode: QUERY, status: SERVFAIL, id: 2002\n;; flags: qr rd ra; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n",
+  "TYPE65 www.example.com": ";; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 61848\n;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1\n\n;; ANSWER SECTION:\nwww.example.com.\t\t300\tIN\tTYPE65\t\\# 61 0001000001000602683302683200040008681084E5681085E5000600 20260647000000000000000000681084E52606470000000000000000 00681085E5\n",
+  "TYPE65 www.example.net": ";; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 61849\n;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1\n\n;; ANSWER SECTION:\nwww.example.net.\t\t300\tIN\tHTTPS\t1 . alpn=\"h3,h2\" ipv4hint=104.16.132.229,104.16.133.229 ech=AEX+DQBB\n",
+  "TYPE65 www.example.org": ";; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 61850\n;; flags: qr rd ra; QUERY: 1, ANSWER: 2, AUTHORITY: 0, ADDITIONAL: 1\n\n;; ANSWER SECTION:\nwww.example.org.\t300\tIN\tA\t104.16.132.229\nwww.example.org.\t300\tIN\tA\t104.16.133.229\n",
+  "TYPE65 www.example.edu": "ZAMAN",
+  "ripestat-ulke": {"status":"ok","status_code":200,"data":{"located_resources":[{"resource":"192.0.2.10/32","locations":[{"country":"CZ","city":"Prague","resources":["192.0.2.0/23"],"covered_percentage":100.0}]}]}},
+  "ripestat-anycast": {"status":"ok","status_code":200,"data":{"located_resources":[{"resource":"192.0.2.20/32","locations":[{"country":"?","city":"","resources":["192.0.2.0/14"],"covered_percentage":100.0}]}]}},
+  "greenweb-yesil": {"url":"www.example.com","hosted_by":"Cloudflare","listed_provider":true,"green":true,"hosted_by_id":779},
+  "greenweb-kayitsiz": {"green":false,"url":"www.example.org","data":false}
+}

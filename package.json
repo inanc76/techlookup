@@ -1,7 +1,7 @@
 {
   "name": "techlookup",
-  "version": "1.0.0",
-  "description": "Bir web sitesinin kimliğini (alan adı sahibi ve yaşı, siteyi yapan ajans, şablon tarihi) ve teknolojilerini tek tabloda çıkarır; Claude Code /techlookup skill'i.",
+  "version": "1.1.0",
+  "description": "Bir web sitesinin kimliğini, teknolojilerini, DNS/e-posta güvenliğini, SSL ayarlarını, kök dosyalarını ve paylaşım etiketlerini 7 bölümlük tek raporda çıkarır; toplu CSV taraması; Claude Code /techlookup skill'i.",
   "type": "module",
   "bin": { "techlookup": "bin/techlookup.mjs" },
   "files": ["bin", "scripts", "SKILL.md", "README.md", "LICENSE"],

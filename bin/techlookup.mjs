@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // techlookup — bir web sitesinin kimliğini ve teknolojisini çıkarır; Claude Code skill'ini kurar.
 //   techlookup <adres> [--statik] [--json]   doğrudan tarama (Claude gerekmez)
+//   techlookup --liste siteler.txt [--cikti x.csv]   toplu tarama → CSV
 //   techlookup kur [--proje]                 /techlookup skill'ini ~/.claude/skills/ (veya ./.claude/skills/) altına kurar
 //   techlookup kaldir [--proje]              yalnız kendi kurduğu dosyaları siler
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, rmSync, rmdirSync, copyFileSync } from 'node:fs';
@@ -18,6 +19,10 @@ const YARDIM = `techlookup ${SURUM} — web sitesi kimliği ve teknoloji taramas
 
 Kullanım:
   techlookup <adres> [--statik] [--json]   Siteyi tarar, tabloyu terminale basar
+  techlookup --liste siteler.txt [--cikti sonuc.csv] [--statik]
+                                           Listedeki siteleri sırayla tarar, her siteyi CSV'ye
+                                           bir satır yazar (varsayılan ./techlookup-toplu-YYYYMMDD.csv).
+                                           Yarıda kalırsa aynı komut kaldığı yerden sürer.
   techlookup kur [--proje]                 /techlookup komutunu Claude Code'a kurar
                                            (varsayılan ~/.claude/skills/, --proje ile ./.claude/skills/)
   techlookup kaldir [--proje]              Kurulan dosyaları kaldırır
@@ -30,7 +35,7 @@ Kullanım:
 Seçenekler:
   --statik   Chrome katmanını atla (daha hızlı; sonradan yüklenen araçlar görünmez)
   --json     Makine okunur çıktı
-Çıkış kodu: 0 sonuç var · 2 site hiç ölçülemedi`;
+Çıkış kodu: 0 sonuç var · 2 site hiç ölçülemedi (toplu: en az biri) · 1 liste/CSV okunamadı`;
 
 const urunDosyalari = () => ['SKILL.md', ...readdirSync(join(KOK, 'scripts')).filter((f) => f.endsWith('.mjs')).map((f) => `scripts/${f}`)];
 const hedefYolu = (proje) => (proje ? resolve(process.cwd(), '.claude', 'skills', 'techlookup') : join(homedir(), '.claude', 'skills', 'techlookup'));
@@ -72,16 +77,20 @@ function kaldir(proje) {
 }
 
 async function tara(adres, arg) {
-  const { calistir } = await import(join(KOK, 'scripts', 'techlookup.mjs'));
+  const { calistir, jsonMetni } = await import(join(KOK, 'scripts', 'techlookup.mjs'));
   const r = await calistir(adres, { statik: arg.includes('--statik') });
-  if (arg.includes('--json')) {
-    const { grupSirasi, olculemeyenGruplar, ...cikti } = r;
-    process.stdout.write(JSON.stringify(cikti));
-  } else process.stdout.write(r.markdown + '\n');
+  if (arg.includes('--json')) process.stdout.write(jsonMetni(r));
+  else process.stdout.write(r.markdown + '\n');
   return r.cikis;
 }
 
 const arg = process.argv.slice(2);
+if (arg.includes('--liste')) {
+  const { topluTara, topluArgumanlari } = await import(join(KOK, 'scripts', 'toplu.mjs'));
+  const a = topluArgumanlari(arg);
+  if (!a.liste) { console.error('--liste bir dosya adı ister: techlookup --liste siteler.txt'); process.exit(1); }
+  process.exit(await topluTara({ ...a, cikti: a.cikti ?? undefined }));
+}
 const komut = arg.find((a) => !a.startsWith('-'));
 if (!komut || arg.includes('--yardim') || arg.includes('--help') || arg.includes('-h')) {
   console.log(YARDIM);

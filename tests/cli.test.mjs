@@ -1,10 +1,10 @@
 // Komut satırı ve paket ölçütleri — `node --test tests/cli.test.mjs`
 // K-CLI kurulum · yeniden kurulum · proje kurulumu · kaldırma · doğrudan tarama · yardım
-// K-PAKET pakete giren / girmeyen dosyalar
+// K-PAKET pakete giren / girmeyen dosyalar · K-KUR-1.1 kurulan kopya yeni sürümle çalışır
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import { mkdtempSync, readFileSync, writeFileSync, existsSync, mkdirSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync, existsSync, mkdirSync, rmSync, copyFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -102,4 +102,26 @@ test('K-PAKET — ürün dosyaları girer, ölçüt ve önbellek girmez', async 
   const yollar = JSON.parse(stdout)[0].files.map((f) => f.path);
   for (const y of ['bin/techlookup.mjs', 'scripts/techlookup.mjs', 'SKILL.md', 'README.md', 'LICENSE', 'package.json']) assert.ok(yollar.includes(y), `${y} pakette yok`);
   for (const y of yollar) assert.ok(!/^(tests|veri|gecici)\//.test(y) && !y.includes('.yedek-'), `${y} pakete girmemeli`);
+});
+
+test('K-KUR-1.1 — kurulan kopya 1.1 modüllerini taşır, sürümünü bilir, yeni anahtarlarla tarar', async () => {
+  const home = gecici('kur11');
+  assert.equal((await cagir(['kur'], { home })).cikis, 0);
+  const hedef = join(home, '.claude', 'skills', 'techlookup');
+  const paket = JSON.parse(readFileSync(join(kok, 'package.json'), 'utf8'));
+  const manifesto = JSON.parse(readFileSync(join(hedef, '.techlookup-kurulum.json'), 'utf8'));
+  assert.equal(manifesto.surum, paket.version);
+  for (const m of ['ortak', 'eposta', 'dosyalar', 'guvenlik', 'sayfa', 'cms-surum', 'toplu']) assert.ok(manifesto.dosyalar.includes(`scripts/${m}.mjs`), `manifestoda ${m}.mjs yok`);
+  // parmak izi verisi ağdan inmesin: depodaki önbellek kopyalanır (yoksa ölçüt ağa bağımlı kalır)
+  mkdirSync(join(hedef, 'veri'), { recursive: true });
+  copyFileSync(join(kok, 'veri', 'teknolojiler.json'), join(hedef, 'veri', 'teknolojiler.json'));
+  const { stdout } = await koş('node', [join(hedef, 'scripts', 'techlookup.mjs'), `${taban}/`, '--statik', '--json'], { env: { ...process.env, HOME: home }, timeout: 120_000, maxBuffer: 50e6 });
+  assert.ok(stdout.trim(), 'kurulan betik hiçbir şey basmadı (doğrudan çalıştırma denetimi yolu tanımadı mı?)');
+  const r = JSON.parse(stdout);
+  assert.equal(r.cikis, 0);
+  assert.equal(r.surum, paket.version, 'kurulan kopya sürümünü bilmiyor (package.json yok, manifestodan okunmalı)');
+  for (const k of ['dnsSunucu', 'eposta', 'guvenlikEk', 'dosyalar', 'paylasim']) assert.ok(r[k], `${k} anahtarı yok`);
+  const t = await koş('node', [join(hedef, 'scripts', 'toplu.mjs')], { timeout: 30_000 }).catch((e) => e);
+  assert.equal(t.code, 1, 'kurulan toplu.mjs argümansız kullanım metniyle 1 dönmeli');
+  assert.match(t.stderr, /--liste/);
 });

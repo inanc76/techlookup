@@ -4,6 +4,7 @@ import { promisify } from 'node:util';
 import { readFileSync, writeFileSync, existsSync, statSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { guvenliMetin } from './ortak.mjs';
 
 const VERI = join(dirname(dirname(fileURLToPath(import.meta.url))), 'veri');
 const YEDI_GUN = 7 * 24 * 3600 * 1000;
@@ -333,8 +334,10 @@ export async function sablonTarihi(host, canliHtml, { sure = 75_000, getir = ars
   } catch (e) {
     return { durum: `ölçülemedi (archive.org: ${e.cause?.code ?? e.message})` };
   }
+  // arşivde ilk görülme: CDX listesi aylık (collapse=timestamp:6) — ilk kayıt + kaç ayda kayıt var; ek istek yok
+  const arsiv = { ilkKayit: zamanlar[0] ?? null, aySayisi: zamanlar.length };
   const canli = sablonIzi(canliHtml);
-  if (!canli.varliklar.size && canli.siniflar.size < 5) return { durum: 'ölçülemedi (canlı sayfada şablon izi yok)' };
+  if (!canli.varliklar.size && canli.siniflar.size < 5) return { durum: 'ölçülemedi (canlı sayfada şablon izi yok)', ...arsiv };
   const kayit = (z) => `https://web.archive.org/web/${z}id_/https://${arsivHost}/`;
   const sayfalar = new Map();
   const r = await sablonSinirBul(zamanlar, async (z) => {
@@ -350,5 +353,19 @@ export async function sablonTarihi(host, canliHtml, { sure = 75_000, getir = ars
       r.oncekiAjansOlcmedi = `arşiv kaydı açılamadı (${e.cause?.code ?? e.message})`;
     }
   }
-  return { ...r, toplam: zamanlar.length };
+  return { ...r, toplam: zamanlar.length, ...arsiv };
+}
+
+
+// ---------- humans.txt ----------
+const HUMANS_ETIKET = /^[ \t]*(designer|developer|agency|company|design|web design|tasar[ıi]m|yaz[ıi]l[ıi]m)[ \t]*:[ \t]*(.+)$/gim;
+
+/** humans.txt'ten ajans adayı: Designer/Developer/Agency/Company satırı ya da imza. E-posta ve adres düşürülür. */
+export function humansAjans(metin) {
+  for (const m of metin.matchAll(HUMANS_ETIKET)) {
+    const ad = temizAd(m[2].replace(/\S+@\S+/g, ' ').replace(/https?:\/\/\S+/g, ' ').replace(/[()<>[\]]/g, ' '));
+    if (ad && /\p{L}/u.test(ad)) return { ad: guvenliMetin(ad, 60), kanit: `humans.txt: ${m[1].trim()} satırı` };
+  }
+  const b = imzaAra(metin.replace(/\S+@\S+/g, ' '));
+  return b ? { ad: guvenliMetin(b.ad, 60), kanit: `humans.txt: "${guvenliMetin(b.alinti, 60)}"` } : null;
 }

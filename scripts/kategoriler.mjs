@@ -44,6 +44,22 @@ export const DISLANAN_ADLAR = new Set([
   'Lucky Orange', 'Inspectlet', 'Yandex.Metrika Webvisor', 'Contentsquare', 'Clicktale',
 ]);
 
+// Parmak izi deseni yakalamayan kapsam dışı alanlar (yazı tipi / video / harita / ısı haritası / ödeme).
+// "Dış alan adları" satırında bu alanlara (ve alt alanlarına) giden istekler basılmaz.
+// webappanalyzer'da fonts.gstatic.com ve Vimeo için adres deseni yok (2026-10-17 ölçüldü) — bu yüzden ayrı liste.
+export const DISLANAN_ALANLAR = [
+  'fonts.gstatic.com', 'fonts.googleapis.com', 'use.typekit.net', 'fonts.bunny.net',
+  'youtube.com', 'ytimg.com', 'youtube-nocookie.com', 'googlevideo.com', 'vimeo.com', 'vimeocdn.com', 'wistia.com', 'wistia.net',
+  'maps.googleapis.com', 'maps.gstatic.com', 'api.mapbox.com', 'api-maps.yandex.ru',
+  'hotjar.com', 'hotjar.io', 'clarity.ms', 'fullstory.com', 'mouseflow.com', 'smartlook.com', 'crazyegg.com', 'luckyorange.com', 'inspectlet.com', 'contentsquare.net',
+  'iyzipay.com', 'iyzico.com', 'paytr.com', 'stripe.com', 'stripe.network', 'paypal.com', 'paypalobjects.com',
+];
+
+export function alanDislanirMi(host) {
+  const h = String(host).toLowerCase();
+  return DISLANAN_ALANLAR.some((d) => h === d || h.endsWith(`.${d}`));
+}
+
 // Veritabanında yanlış/uygunsuz gruba düşenler — adıyla doğru gruba çekilir.
 const AD_GRUP = {
   'Facebook Pixel': 'Reklam pikselleri',
