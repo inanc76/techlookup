@@ -9,10 +9,12 @@ import { readFileSync, writeFileSync, existsSync, statSync, mkdirSync } from 'no
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import tls from 'node:tls';
-import { veritabaniDerle, eslestir, tarayiciIstekleri } from './eslesme.mjs';
+import { veritabaniDerle, eslestir, tarayiciIstekleri, adresTeknolojileri } from './eslesme.mjs';
 import { grupla, GRUPLAR } from './kategoriler.mjs';
 import { dnsTopla, dnsYorumla, kokAlan, dnsGuvenlik, sunucuBilgisi } from './dns.mjs';
-import { satir, SURUM } from './ortak.mjs';
+import { satir, SURUM, guvenliMetin } from './ortak.mjs';
+import { cmsSurumu } from './cms-surum.mjs';
+import { wordpressIzleri, disAlanAdlari } from './sayfa.mjs';
 import { epostaGuvenligi } from './eposta.mjs';
 import { siteDosyalari } from './dosyalar.mjs';
 import { sertifikaKapsami, hstsKosullari, setCookieBayraklari, cerezSatiri, yonlendirmeZinciri } from './guvenlik.mjs';
@@ -351,7 +353,28 @@ export async function calistir(girdi, { statik: yalnizStatik = false } = {}) {
   if (!dnsHam) for (const g of ['E-posta altyapısı', 'Doğrulama kayıtları']) olculemeyenGruplar[g] = yerel ? 'yerel adres, DNS sorgusu yapılmadı' : 'DNS sorgusu cevap vermedi';
   if (!tarayiciVeri) for (const g of TARAYICI_GRUPLARI) olculemeyenGruplar[g] = `tarayıcı katmanı ${tr.durum === 'atlandı' ? 'atlandı' : 'çalışmadı'}, sonradan yüklenen araçlar görünmez`;
 
-  const [alanAdi, sablon, , dnsG, sunucu, epostaHam, dosyalar] = await Promise.all([alanAdiSozu, sablonSozu, surumleriEkle(gruplar), dnsGuvenlikSozu, sunucuSozu, epostaSozu, dosyalarSozu]);
+  // CMS sürümü bilinen dosyadan dolar, sonra yıl/güncel sürüm o sürüme göre bulunur
+  const sayfaOrigin = new URL(sinyal.url ?? adres).origin;
+  const surumSozu = cmsSurumu(gruplar, sayfaOrigin, sinyal.html).then(() => surumleriEkle(gruplar));
+  const [alanAdi, sablon, , dnsG, sunucu, epostaHam, dosyalar] = await Promise.all([alanAdiSozu, sablonSozu, surumSozu, dnsGuvenlikSozu, sunucuSozu, epostaSozu, dosyalarSozu]);
+
+  // WordPress teması / eklentileri: sayfa kodu ve isteklerdeki /wp-content/ yollarından (ek istek yok)
+  const wp = wordpressIzleri({ html: sinyal.html, istekler: sinyal.istekler, scriptSrc: sinyal.scriptSrc });
+  const izKaynak = tarayiciVeri ? 'sayfa kodu + tarayıcı istekleri' : 'yalnız sayfa kodu (tarayıcı yok)';
+  if (wp.tema) (gruplar.CMS ??= []).push({ ad: `WordPress teması: ${guvenliMetin(wp.tema, 60)}`, kategoriler: [], surum: null, kanit: [`${izKaynak}: /wp-content/themes/`] });
+  if (wp.eklentiler.length) {
+    const fazla = wp.eklentiler.length - 20;
+    (gruplar.CMS ??= []).push({
+      ad: `WordPress eklentileri (${wp.eklentiler.length}): ${wp.eklentiler.slice(0, 20).map((e) => guvenliMetin(e, 60)).join(', ')}${fazla > 0 ? ` +${fazla} daha` : ''}`,
+      kategoriler: [], surum: null, liste: wp.eklentiler, kanit: [`${izKaynak}: /wp-content/plugins/`],
+    });
+  }
+  // dış alan adları: üçüncü taraf kayıtlı alanlar; kapsam dışı teknolojiye düşen istek basılmaz
+  const dis = disAlanAdlari({
+    istekler: sinyal.istekler, scriptSrc: sinyal.scriptSrc, siteHost: new URL(sayfaOrigin).hostname,
+    teknolojiBul: (u) => adresTeknolojileri(db, u),
+  });
+  if (dis.liste.length) (gruplar['Diğer'] ??= []).push({ ad: `Dış alan adları (${dis.liste.length}): ${dis.ad}`, kategoriler: [], surum: null, liste: dis.liste, kanit: [izKaynak] });
   const eposta = Object.fromEntries(['spf', 'dmarc', 'dkim', 'mtaSts', 'tlsRpt', 'bimi'].map((k) => [k, epostaHam?.[k] ?? yerelSatir()]));
   const dnsSunucu = {
     dnssec: dnsG?.dnssec ?? yerelSatir(), caa: dnsG?.caa ?? yerelSatir(), soa: dnsG?.soa ?? yerelSatir(), https: dnsG?.https ?? yerelSatir(),

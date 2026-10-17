@@ -15,7 +15,7 @@ function ayniSite(adres, site) {
   try { const u = new URL(adres); return /^https?:$/.test(u.protocol) && kayitliAlan(u.hostname) === site; } catch { return false; }
 }
 
-async function ayniSiteGetir(adres, site, getir, bayt) {
+export async function ayniSiteGetir(adres, site, getir, bayt) {
   let u = adres;
   for (let i = 0; i < 4; i++) {
     const r = await getir(u, { bayt, yonlendirme: 'manual', ua: UA_TARAYICI });
