@@ -14,7 +14,7 @@ import { grupla, GRUPLAR } from './kategoriler.mjs';
 import { dnsTopla, dnsYorumla, kokAlan, dnsGuvenlik, sunucuBilgisi } from './dns.mjs';
 import { satir, SURUM, guvenliMetin } from './ortak.mjs';
 import { cmsSurumu } from './cms-surum.mjs';
-import { wordpressIzleri, disAlanAdlari } from './sayfa.mjs';
+import { wordpressIzleri, disAlanAdlari, paylasimEtiketleri } from './sayfa.mjs';
 import { epostaGuvenligi } from './eposta.mjs';
 import { siteDosyalari } from './dosyalar.mjs';
 import { sertifikaKapsami, hstsKosullari, setCookieBayraklari, cerezSatiri, yonlendirmeZinciri } from './guvenlik.mjs';
@@ -200,6 +200,10 @@ export function kimlikSatirlari(k) {
   else s.push([IKON.yok, 'Siteyi yapan ajans', 'imza bulunamadı', 'alt bilgi · bağlantılar · meta etiketleri']);
 
   const t = k.sablon;
+  const ILK = 'Arşivde ilk görülme';
+  if (t?.aySayisi > 0) s.push([IKON.var, ILK, `**${ay(t.ilkKayit)}** (${sure(zamanTarih(t.ilkKayit))}) · ${t.aySayisi} ayda kayıt`, 'archive.org (aylık kayıt listesi)']);
+  else if (t?.aySayisi === 0) s.push([IKON.yok, ILK, 'arşivde kayıt yok', 'archive.org']);
+  else s.push([IKON.olcmedi, ILK, olcmediMetin(t?.durum), 'archive.org']);
   const ONCEKI = 'Önceki siteyi yapan ajans';
   if (!t || /^(ölçülemedi|atlandı)/.test(t.durum)) s.push([IKON.olcmedi, ONCEKI, `ölçülemedi — şablon geçmişi okunamadı`, 'archive.org']);
   else if (!t.sonFarkli) s.push([IKON.yok, ONCEKI, 'arşivde önceki şablon yok', 'archive.org']);
@@ -386,6 +390,7 @@ export async function calistir(girdi, { statik: yalnizStatik = false } = {}) {
 
   const r = {
     surum: SURUM, adres, host, sonAdres: sinyal.url, notlar, gruplar, dislanan, grupSirasi, olculemeyenGruplar, kimlik, dnsSunucu, eposta, guvenlikEk, dosyalar,
+    paylasim: paylasimEtiketleri({ html: sinyal.html, meta: sinyal.meta }),
     durum: {
       statik: st.durum,
       tarayici: tr.durum,

@@ -334,8 +334,10 @@ export async function sablonTarihi(host, canliHtml, { sure = 75_000, getir = ars
   } catch (e) {
     return { durum: `ölçülemedi (archive.org: ${e.cause?.code ?? e.message})` };
   }
+  // arşivde ilk görülme: CDX listesi aylık (collapse=timestamp:6) — ilk kayıt + kaç ayda kayıt var; ek istek yok
+  const arsiv = { ilkKayit: zamanlar[0] ?? null, aySayisi: zamanlar.length };
   const canli = sablonIzi(canliHtml);
-  if (!canli.varliklar.size && canli.siniflar.size < 5) return { durum: 'ölçülemedi (canlı sayfada şablon izi yok)' };
+  if (!canli.varliklar.size && canli.siniflar.size < 5) return { durum: 'ölçülemedi (canlı sayfada şablon izi yok)', ...arsiv };
   const kayit = (z) => `https://web.archive.org/web/${z}id_/https://${arsivHost}/`;
   const sayfalar = new Map();
   const r = await sablonSinirBul(zamanlar, async (z) => {
@@ -351,7 +353,7 @@ export async function sablonTarihi(host, canliHtml, { sure = 75_000, getir = ars
       r.oncekiAjansOlcmedi = `arşiv kaydı açılamadı (${e.cause?.code ?? e.message})`;
     }
   }
-  return { ...r, toplam: zamanlar.length };
+  return { ...r, toplam: zamanlar.length, ...arsiv };
 }
 
 

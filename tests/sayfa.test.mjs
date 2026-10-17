@@ -1,9 +1,9 @@
 // Teknoloji eki ölçütleri — `node --test tests/sayfa.test.mjs`
-// K27 CMS tam sürümü · K28 WordPress teması/eklentileri · K29 dış alan adları
+// K27 CMS tam sürümü · K28 WordPress teması/eklentileri · K29 dış alan adları · K35 paylaşım etiketleri
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { cmsSurumu } from '../scripts/cms-surum.mjs';
-import { wordpressIzleri, disAlanAdlari } from '../scripts/sayfa.mjs';
+import { wordpressIzleri, disAlanAdlari, paylasimEtiketleri } from '../scripts/sayfa.mjs';
 
 const ORIGIN = 'https://www.example.com';
 function sahteGetir(tablo, cagrilar) {
@@ -73,4 +73,28 @@ test('K29 dış alan adları — yalnız üçüncü taraf kayıtlı alanlar; sit
   const cok = disAlanAdlari({ istekler: Array.from({ length: 45 }, (_, i) => `https://a${i}.ornek${i}.net/x.js`), scriptSrc: [], siteHost: 'www.example.com', teknolojiBul: () => [] });
   assert.equal(cok.liste.length, 45);
   assert.match(cok.ad, /\+5 daha/);
+});
+
+test('K35 paylaşım etiketleri — Open Graph · Twitter Card · JSON-LD · hreflang · manifest; yoksa ➖', () => {
+  const html = `<head><meta property="og:title" content="Ornek Baslik"><meta property="og:image" content="https://www.example.com/k.png"><meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image"><meta name="twitter:site" content="@ornek">
+    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"Organization"},{"@type":["WebSite","Thing"]}]}</script>
+    <script type="application/ld+json">{bozuk</script>
+    <link rel="alternate" hreflang="tr" href="/tr/"><link hreflang="en" rel="alternate" href="/en/"><link rel="alternate" hreflang="x-default" href="/">
+    <link rel="manifest" href="/site.webmanifest?v=GIZLI3"></head>`;
+  const meta = { 'og:title': 'Ornek Baslik', 'og:image': 'https://www.example.com/k.png', 'og:type': 'website', 'twitter:card': 'summary_large_image', 'twitter:site': '@ornek' };
+  const p = paylasimEtiketleri({ html, meta });
+  for (const k of ['openGraph', 'twitter', 'jsonLd', 'hreflang', 'manifest']) assert.equal(p[k]?.durum, 'var', `${k}: ${JSON.stringify(p[k])}`);
+  assert.match(p.openGraph.deger, /3 etiket/);
+  assert.match(p.openGraph.deger, /görsel ✓/);
+  assert.match(p.openGraph.deger, /Ornek Baslik/);
+  assert.match(p.twitter.deger, /summary_large_image/);
+  assert.deepEqual(p.jsonLd.turler, ['Organization', 'WebSite', 'Thing']);
+  assert.match(p.jsonLd.deger, /1 blok çözülemedi/);
+  assert.deepEqual(p.hreflang.diller, ['en', 'tr', 'x-default']);
+  assert.equal(p.manifest.deger, '/site.webmanifest');
+  assert.ok(!JSON.stringify(p).includes('GIZLI3'), 'manifest sorgu dizesi çıktıya girdi');
+
+  const bos = paylasimEtiketleri({ html: '<html><head></head></html>', meta: {} });
+  for (const k of ['openGraph', 'twitter', 'jsonLd', 'hreflang', 'manifest']) assert.equal(bos[k]?.durum, 'yok', k);
 });
