@@ -14,6 +14,7 @@ import { grupla, GRUPLAR } from './kategoriler.mjs';
 import { dnsTopla, dnsYorumla, kokAlan, dnsGuvenlik, sunucuBilgisi } from './dns.mjs';
 import { satir, SURUM } from './ortak.mjs';
 import { epostaGuvenligi } from './eposta.mjs';
+import { sertifikaKapsami, hstsKosullari, setCookieBayraklari, cerezSatiri, yonlendirmeZinciri } from './guvenlik.mjs';
 import { tarayiciTara } from './tarayici.mjs';
 import { alanAdiSorgula, ajansBul, sablonTarihi } from './kimlik.mjs';
 import { surumleriEkle } from './surum.mjs';
@@ -84,7 +85,8 @@ async function statikTara(adres) {
       const i = cift.indexOf('=');
       if (i > 0) cookies[cift.slice(0, i).trim().toLowerCase()] = cift.slice(i + 1).trim();
     }
-    return { durum: c.ok ? 'tamam' : `HTTP ${c.status}`, veri: { url: c.url, html, headers, cookies, durumKodu: c.status, ...htmlAyikla(html) } };
+    const cerezBayraklari = setCookieBayraklari(c.headers.getSetCookie());
+    return { durum: c.ok ? 'tamam' : `HTTP ${c.status}`, veri: { url: c.url, html, headers, cookies, cerezBayraklari, durumKodu: c.status, ...htmlAyikla(html) } };
   } catch (e) {
     const neden = e.cause?.code ?? e.name ?? e.message;
     return { durum: `ölçülemedi (${neden})`, cozulemedi: neden === 'ENOTFOUND' };
@@ -101,6 +103,7 @@ function sslTara(host) {
         bitis: c?.valid_to ? new Date(c.valid_to).toISOString().slice(0, 10) : null,
         tls: s.getProtocol(),
         gecerli: s.authorized,
+        kapsam: sertifikaKapsami(c),
       });
       s.end();
     });
@@ -277,6 +280,9 @@ export async function calistir(girdi, { statik: yalnizStatik = false } = {}) {
   const yerel = /^(localhost|127\.|\d+\.\d+\.\d+\.\d+$)/.test(host);
   const yerelSatir = () => satir('olcmedi', 'ölçülemedi — yerel adres, DNS ve dış kaynak sorulmadı');
   const dnsGuvenlikSozu = yerel ? Promise.resolve(null) : dnsGuvenlik(kokAlan(host), host);
+  const http = new URL(adres);
+  http.protocol = 'http:';
+  const yonlendirmeSozu = yonlendirmeZinciri(`${http.origin}/`);
   const epostaSozu = yerel ? Promise.resolve(null) : epostaGuvenligi(kokAlan(host));
   const alanAdiSozu = yerel ? Promise.resolve({ durum: 'ölçülemedi (yerel adres, alan adı kaydı yok)' }) : alanAdiSorgula(host);
   const [st, dnsHam, ssl] = await Promise.all([
@@ -328,6 +334,14 @@ export async function calistir(girdi, { statik: yalnizStatik = false } = {}) {
   }
 
   const sonHeaders = sinyal.headers;
+  const [cerezListe, cerezKaynak] = tarayiciVeri?.cerezBayraklari ? [tarayiciVeri.cerezBayraklari, 'tarayıcı (Network.getCookies)']
+    : st.veri ? [st.veri.cerezBayraklari, 'Set-Cookie başlığı'] : [null, ''];
+  const guvenlikEk = {
+    kapsam: ssl ? ssl.kapsam : ssl === undefined ? satir('yok', 'şifresiz adres (http), sertifika yok') : satir('olcmedi', 'ölçülemedi — sertifika okunamadı'),
+    yonlendirme: await yonlendirmeSozu,
+    hstsOnyukleme: hstsKosullari(sonHeaders['strict-transport-security']),
+    cerezler: cerezSatiri(cerezListe, cerezKaynak),
+  };
   const guvenlik = st.veri || tarayiciVeri ? GUVENLIK_BASLIKLARI.map(([k, ad]) => [k, ad, k in sonHeaders]) : null;
 
   const grupSirasi = GRUPLAR;
@@ -344,17 +358,18 @@ export async function calistir(girdi, { statik: yalnizStatik = false } = {}) {
   const kimlik = { alanAdi, ajans: ajansBul(sinyal.html, host), sablon };
 
   const r = {
-    surum: SURUM, adres, host, sonAdres: sinyal.url, notlar, gruplar, dislanan, grupSirasi, olculemeyenGruplar, kimlik, dnsSunucu, eposta,
+    surum: SURUM, adres, host, sonAdres: sinyal.url, notlar, gruplar, dislanan, grupSirasi, olculemeyenGruplar, kimlik, dnsSunucu, eposta, guvenlikEk,
     durum: {
       statik: st.durum,
       tarayici: tr.durum,
       dns: yerel ? 'atlandı' : dnsHam ? 'tamam' : 'ölçülemedi',
       ssl: ssl === undefined ? 'atlandı' : ssl ? 'tamam' : 'ölçülemedi',
       eposta: yerel ? 'atlandı' : Object.values(eposta).every((x) => x.durum === 'olcmedi') ? 'ölçülemedi' : 'tamam',
+      yonlendirme: guvenlikEk.yonlendirme.durum === 'olcmedi' ? 'ölçülemedi' : 'tamam',
       ulke: yerel ? 'atlandı' : dnsSunucu.ulke.durum === 'olcmedi' ? 'ölçülemedi' : 'tamam',
       yesilEnerji: yerel ? 'atlandı' : dnsSunucu.yesil.durum === 'olcmedi' ? 'ölçülemedi' : 'tamam',
     },
-    ssl: ssl ?? null,
+    ssl: ssl ? { veren: ssl.veren, bitis: ssl.bitis, tls: ssl.tls, gecerli: ssl.gecerli, adlar: ssl.kapsam.adlar, kalanGun: ssl.kapsam.kalanGun } : null,
     guvenlik,
   };
   r.markdown = markdownYaz(r);

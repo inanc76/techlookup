@@ -4,6 +4,7 @@ import { spawn } from 'node:child_process';
 import { mkdtempSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { tarayiciCerezBayraklari } from './guvenlik.mjs';
 
 const CHROME_YOLLARI = [
   process.env.TECHLOOKUP_CHROME,
@@ -148,6 +149,8 @@ export async function tarayiciTara(adres, { jsYollari, domKurallari, sure = 25_0
 
     const { cookies } = await baglanti.gonder('Network.getCookies', { urls: [veri.url] });
     veri.cookies = Object.fromEntries(cookies.map((c) => [c.name.toLowerCase(), c.value]));
+    // çıktıya giden çerez kaydı yalnız ad + bayrak; değer yalnız parmak izi eşleşmesinde kalır
+    veri.cerezBayraklari = tarayiciCerezBayraklari(cookies);
     veri.istekler = [...istekler];
     veri.headers = anaBelge ? Object.fromEntries(Object.entries(anaBelge.headers).map(([k, v]) => [k.toLowerCase(), v])) : {};
     veri.durumKodu = anaBelge?.status ?? null;
