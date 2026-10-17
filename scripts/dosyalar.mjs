@@ -84,7 +84,7 @@ function adsOlgusu(govde) {
   return satir('var', `${kayit.length} satıcı satırı · ${sistem.size} reklam sistemi`, `/ads.txt · ${boyut(govde)}`);
 }
 
-/** origin: taranan sitenin kökü (https://www.ornek.com). getir: test için değiştirilebilir. */
+/** origin: taranan sitenin kökü (https://example.com). getir: test için değiştirilebilir. */
 export function siteDosyalari(origin, { getir = sinirliGetir, sure = 30_000 } = {}) {
   return sureSiniri(siteDosyalariIc(origin, getir), sure,
     () => Object.fromEntries(['robots', 'sitemap', 'securityTxt', 'llms', 'ads', 'humans'].map((k) => [k, satir('olcmedi', sureMetni(sure))])));

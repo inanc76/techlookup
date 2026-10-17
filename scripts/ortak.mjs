@@ -1,5 +1,5 @@
 // Ortak yardımcılar: sürüm · tablo satırı · siteden gelen metnin süzgeci · boyut ve süre sınırlı getirme.
-import { readFileSync } from 'node:fs';
+import { readFileSync, realpathSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -92,4 +92,13 @@ export function yorumSuz(x) {
   if (Array.isArray(x)) return x.map(yorumSuz);
   if (x && typeof x === 'object') return Object.fromEntries(Object.entries(x).map(([k, v]) => [k, yorumSuz(v)]));
   return x;
+}
+
+/**
+ * Betik doğrudan mı çalıştırıldı? İki yolun GERÇEK hâli karşılaştırılır: macOS'ta /var → /private/var gibi
+ * kısayollu bir yoldan çalışınca düz karşılaştırma tutmuyor ve betik sessizce hiçbir şey basmıyordu.
+ */
+export function dogrudanMi(metaUrl) {
+  if (!process.argv[1]) return false;
+  try { return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(metaUrl)); } catch { return false; }
 }

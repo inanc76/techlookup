@@ -107,7 +107,7 @@ export function paylasimEtiketleri({ html = '', meta = {} } = {}) {
   let manifest = satir('yok', 'bulunamadı', 'link rel="manifest"');
   if (mHref) {
     let yol;
-    try { yol = new URL(mHref, 'https://yer.invalid').pathname; } catch { yol = null; }
+    try { yol = new URL(mHref, 'https://example.invalid').pathname; } catch { yol = null; }
     manifest = yol ? satir('var', guvenliMetin(yol, 80), 'link rel="manifest" (dosya açılmadı)') : satir('olcmedi', 'ölçülemedi — adres çözülemedi', 'link rel="manifest"');
   }
   return { openGraph, twitter, jsonLd, hreflang, manifest };

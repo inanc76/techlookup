@@ -12,7 +12,7 @@ import tls from 'node:tls';
 import { veritabaniDerle, eslestir, tarayiciIstekleri, adresTeknolojileri } from './eslesme.mjs';
 import { grupla, GRUPLAR } from './kategoriler.mjs';
 import { dnsTopla, dnsYorumla, kokAlan, dnsGuvenlik, sunucuBilgisi, sunucuIp } from './dns.mjs';
-import { satir, SURUM, guvenliMetin, yorumSuz } from './ortak.mjs';
+import { satir, SURUM, guvenliMetin, yorumSuz, dogrudanMi } from './ortak.mjs';
 import { cmsSurumu } from './cms-surum.mjs';
 import { wordpressIzleri, disAlanAdlari, paylasimEtiketleri } from './sayfa.mjs';
 import { epostaGuvenligi } from './eposta.mjs';
@@ -451,7 +451,7 @@ function olculemedi(host, neden) {
   };
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (dogrudanMi(import.meta.url)) {
   const arg = process.argv.slice(2);
   const adres = arg.find((a) => !a.startsWith('--'));
   if (!adres) {

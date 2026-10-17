@@ -3,10 +3,9 @@
 //   node scripts/toplu.mjs --liste siteler.txt [--cikti sonuc.csv] [--statik]
 // Çıkış: 0 hepsi ölçüldü · 2 en az biri ölçülemedi · 1 liste/CSV okunamadı ya da CSV başlığı uymuyor
 import { readFileSync, existsSync, appendFileSync, truncateSync, statSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { calistir, kimlikSatirlari, sslSatirlari, BOLUM_SATIRLARI, IKON } from './techlookup.mjs';
 import { GRUPLAR } from './kategoriler.mjs';
-import { SURUM, guvenliMetin } from './ortak.mjs';
+import { SURUM, guvenliMetin, dogrudanMi } from './ortak.mjs';
 import { tarayicilariTemizle } from './tarayici.mjs';
 
 const latin = (s) => s.toLocaleLowerCase('tr').replace(/ç/g, 'c').replace(/ğ/g, 'g').replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ş/g, 's').replace(/ü/g, 'u')
@@ -183,7 +182,7 @@ export function topluArgumanlari(arg) {
   return { liste: deger('--liste'), cikti: deger('--cikti'), statik: arg.includes('--statik') };
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (dogrudanMi(import.meta.url)) {
   const a = topluArgumanlari(process.argv.slice(2));
   if (!a.liste) { console.error('Kullanım: node toplu.mjs --liste siteler.txt [--cikti sonuc.csv] [--statik]'); process.exit(1); }
   process.exit(await topluTara({ ...a, cikti: a.cikti ?? undefined }));
